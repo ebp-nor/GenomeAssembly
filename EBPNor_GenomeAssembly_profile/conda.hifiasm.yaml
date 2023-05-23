@@ -1,0 +1,14 @@
+name: /cluster/projects/nn8013k/programs/miniconda3/envs/hifiasm
+channels:
+  - bioconda
+  - conda-forge
+dependencies:
+  - _libgcc_mutex=0.1=conda_forge
+  - _openmp_mutex=4.5=2_gnu
+  - gfastats=1.2.1=hd03093a_0
+  - hifiasm=0.16.1=h5b5514e_1
+  - libgcc-ng=11.2.0=h1d223b6_16
+  - libgomp=11.2.0=h1d223b6_16
+  - libstdcxx-ng=11.2.0=he4da1e4_16
+  - libzlib=1.2.11=h166bdaf_1014
+prefix: /cluster/projects/nn8013k/programs/miniconda3/envs/hifiasm
