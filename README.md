@@ -20,13 +20,15 @@ The current version of this pipeline is designed to work on a cluster with slurm
 
 ### Software
 
-Most software installations is handled by conda.
-However, some software and packages need to manually installed (see requirements).
+Most software installation is handled by conda.
+However, some software and packages need to be manually installed (see requirements).
 To set these up, you need to point the pipeline to the install directories or the name of the modules.
-This can be done by editing the In the EBPNor_GenomeAssembly_config.yaml file in the  EBPNor_GenomeAssembly_profile folder
+This can be done by editing the EBPNor_GenomeAssembly_config.yaml file in the  EBPNor_GenomeAssembly_profile folder.
+
 For modules:
 - Change the parameter "apterfilt_modules" to the name of the GCC and Cmake modules. You can use a python list to add both: ["GCC-module", "CMAKE-module"]
 - Change the parameter "smudge_module" to the name of the Python module 
+
 For non-conda installed software:
 - Set the "adapterfilt_install_dir" parameter to the installation path of HiFiAdapterFilt
 - Set the "smudge_path" parameter to the installation path of KMC
@@ -35,7 +37,8 @@ For non-conda installed software:
 ### Data
 
 In its current setup, the pipeline requires both PacBio HiFi data and paired-end Hi-C data.
-In the folder containg both the Snakefile and the EBPNor_GenomeAssembly_profile folder, you need to create a new folder named "genomic_data"
+In the folder containing both the Snakefile and the EBPNor_GenomeAssembly_profile folder, you need to create a new folder named "genomic_data"
+
 This folder needs to contain two subfolder:
 1) A folder called "pacbio" containing one or multiple PacBio HiFi read files (each ending in .fastq.gz)
 2) A folder called "hic" containing one pair of Hi-C Illumina reads (ending in _1.fastq.gz and _2.fastq.gz)
@@ -44,6 +47,7 @@ This folder needs to contain two subfolder:
 
 General snakemake and cluster submission parameters are defined in EBPNor_GenomeAssembly_profile/config.yaml
 Software-specific parameters are defined in EBPNor_GenomeAssembly_profile/EBPNor_GenomeAssembly_config.yaml
+
 Some important/useful parameters to verify:
 - Billing account for cluster submission ("--account" in config.yaml)
 - Email for job updates on the cluster ("--mail_user" in config.yaml) (the line needs to be uncommented to activate email notifications)
@@ -55,7 +59,7 @@ Some important/useful parameters to verify:
 To run the pipeline run the following command from the folder containing your "Snakefile":
 
 ```
-snakemake --profile EBP_GenomeAssembly_profile {run_mode}
+snakemake --profile EBPNor_GenomeAssembly_profile {run_mode}
 ```
 
 The pipeline contains different run_modes:
