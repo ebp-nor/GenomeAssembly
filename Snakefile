@@ -1,9 +1,14 @@
 #Link to the config.yaml containing all params and other information
 configfile: "EBPNor_GenomeAssembly_profile/EBPNor_GenomeAssembly_config.yaml"
 
+#Get working directory from config
+species_dir = config["species_dir"]
+if not species_dir.endswith("/"):
+    species_dir += "/"
+
 #Fetch and store all *.fastq.gz files in the input directory
-FASTQ, = glob_wildcards("genomic_data/pacbio/{sample,[^/]+}.fastq.gz")
-HIC, = glob_wildcards("genomic_data/hic/{sample}_1.fastq.gz")
+FASTQ, = glob_wildcards(species_dir+"genomic_data/pacbio/{sample,[^/]+}.fastq.gz")
+HIC, = glob_wildcards(species_dir+"genomic_data/hic/{sample}_1.fastq.gz")
 HAPS = ["hap1", "hap2"]
 
 #Define rules that do not need to be submitted to the cluster
@@ -12,34 +17,34 @@ localrules: concatenate_filtered_reads, download_busco_db
 #Summary rule to run full pipeline (pre-assembly, assembly, scaffolding)
 rule all:
     input:
-        expand("results/pre_assembly/genomescope/genomescope_ploidy{ploidy}.out", ploidy=config["GS_ploidy_range"]),
-        expand("results/pre_assembly/smudgeplot/ploidy{ploidy}_smudgeplot.png", ploidy=config["smudge_ploidy"]),
-        expand("results/assembly/busco_assembly.hic.{hap}.p_ctg_{lineage}", lineage=config["busco_lineage"], hap=HAPS),
-        expand("results/scaffolding/busco_{hap}_scaffolds_final_{lineage}", lineage=config["busco_lineage"], hap=HAPS)
+        expand(species_dir+"results/pre_assembly/genomescope/genomescope_ploidy{ploidy}.out", ploidy=config["GS_ploidy_range"]),
+        expand(species_dir+"results/pre_assembly/smudgeplot/ploidy{ploidy}_smudgeplot.png", ploidy=config["smudge_ploidy"]),
+        expand(species_dir+"results/assembly/busco_assembly.hic.{hap}.p_ctg_{lineage}", lineage=config["busco_lineage"], hap=HAPS),
+        expand(species_dir+"results/scaffolding/busco_{hap}_scaffolds_final_{lineage}", lineage=config["busco_lineage"], hap=HAPS)
 
 #Summary rule to run all pre-assembly steps
 rule pre_assembly:
     input:
-        expand("results/pre_assembly/genomescope/genomescope_ploidy{ploidy}.out", ploidy=config["GS_ploidy_range"]),
-        expand("results/pre_assembly/smudgeplot/ploidy{ploidy}_smudgeplot.png", ploidy=config["smudge_ploidy"])
+        expand(species_dir+"results/pre_assembly/genomescope/genomescope_ploidy{ploidy}.out", ploidy=config["GS_ploidy_range"]),
+        expand(species_dir+"results/pre_assembly/smudgeplot/ploidy{ploidy}_smudgeplot.png", ploidy=config["smudge_ploidy"])
 
 #General rule for running only primary assembly and busco
 rule assembly:
     input:
-        expand("results/assembly/busco_assembly.hic.{hap}.p_ctg_{lineage}", lineage=config["busco_lineage"], hap=HAPS)
+        expand(species_dir+"results/assembly/busco_assembly.hic.{hap}.p_ctg_{lineage}", lineage=config["busco_lineage"], hap=HAPS)
         
 #General rule for generated the scaffolded haplotype assemblies (withouth pre-assembly) and busco
 rule scaffolding:
     input:
-        expand("results/assembly/busco_assembly.hic.{hap}.p_ctg_{lineage}", lineage=config["busco_lineage"], hap=HAPS),
-        expand("results/scaffolding/busco_{hap}_scaffolds_final_{lineage}", lineage=config["busco_lineage"], hap=HAPS)
+        expand(species_dir+"results/assembly/busco_assembly.hic.{hap}.p_ctg_{lineage}", lineage=config["busco_lineage"], hap=HAPS),
+        expand(species_dir+"results/scaffolding/busco_{hap}_scaffolds_final_{lineage}", lineage=config["busco_lineage"], hap=HAPS)
 
 #Filter PacBio HiFi reads
 rule hifiadapterfilt:
     output:
-        expand("genomic_data/pacbio/filtered/{sample}.filt.fastq.gz", sample=FASTQ)
+        expand(species_dir+"genomic_data/pacbio/filtered/{sample}.filt.fastq.gz", sample=FASTQ)
     input:
-        expand("genomic_data/pacbio/{sample}.fastq.gz", sample=FASTQ)
+        expand(species_dir+"genomic_data/pacbio/{sample}.fastq.gz", sample=FASTQ)
     resources:
         ntasks = config["adapterfilt_threads"]
     conda:
@@ -47,32 +52,32 @@ rule hifiadapterfilt:
     params:
         threads = config["adapterfilt_threads"],
         installdir = config["adapterfilt_install_dir"],
-        modules = config["adapterfilt_modules"]
+        modules = config["adapterfilt_modules"],
+        workdir = species_dir,
+        tempdir = species_dir+"temp"
     shell:
         r"""
         module load {params.modules}
         export PATH={params.installdir}/DB:{params.intstalldir}:$PATH
-        mkdir -p $USERWORK/tmp
-        export TMPDIR=$USERWORK/tmp
-        cwd=$PWD
-        cd genomic_data/pacbio/
+        mkdir -p {params.tempdir}
+        export TMPDIR={params.tempdir}
+        cd {params.workdir}/genomic_data/pacbio/
         pbadapterfilt.sh -t {params.threads} -o filtered
-        cd $cwd
-        rm -r $USERWORK/tmp
+        rm -r {params.tempdir}
         """
 
 #Count k-mers for genomescope and smudgeplot
 rule count_kmers:
     output:
-        "results/pre_assembly/reads.histo"
+        species_dir+"results/pre_assembly/reads.histo"
     input:
-        expand("genomic_data/pacbio/{sample}.fastq.gz", sample=FASTQ)
+        expand(species_dir+"genomic_data/pacbio/{sample}.fastq.gz", sample=FASTQ)
     conda:
         config["GS_conda_env"]
     resources:
         ntasks = config["KMC_t"]
     params:
-        outdir = "results/pre_assembly",
+        outdir = species_dir+"results/pre_assembly",
         k = config["KMC_k"],
         t = config["KMC_t"],
         m = config["KMC_m"],
@@ -91,13 +96,13 @@ rule count_kmers:
 #Run Genomescope
 rule genomescope:
     output:
-        expand("results/pre_assembly/genomescope/genomescope_ploidy{ploidy}.out", ploidy=config["GS_ploidy_range"])
+        expand(species_dir+"results/pre_assembly/genomescope/genomescope_ploidy{ploidy}.out", ploidy=config["GS_ploidy_range"])
     input:
-        "results/pre_assembly/reads.histo"
+        species_dir+"results/pre_assembly/reads.histo"
     conda:
         config["GS_conda_env"]
     params:
-        outdir = "results/pre_assembly/genomescope",
+        outdir = species_dir+"results/pre_assembly/genomescope",
         ploidy_range = config["GS_ploidy_range"],
         k = config["KMC_k"]
     shell:
@@ -110,14 +115,14 @@ rule genomescope:
 #Run Smudgeplot
 rule smudgeplot:
     output:
-        expand("results/pre_assembly/smudgeplot/ploidy{ploidy}_smudgeplot.png", ploidy=config["smudge_ploidy"]),
+        expand(species_dir+"results/pre_assembly/smudgeplot/ploidy{ploidy}_smudgeplot.png", ploidy=config["smudge_ploidy"]),
     input:
-        "results/pre_assembly/reads.histo"
+        species_dir+"results/pre_assembly/reads.histo"
     conda:
         config["smudge_conda_env"]
     params:
-        indir = "results/pre_assembly",
-        outdir = "results/pre_assembly/smudgeplot",
+        indir = species_dir+"results/pre_assembly",
+        outdir = species_dir+"results/pre_assembly/smudgeplot",
         ploidy = config["smudge_ploidy"],
         kmc_path = config["smudge_path"],
         module = config["smudge_module"],
@@ -137,21 +142,21 @@ rule smudgeplot:
 #Concatenate all filtered reads for assembly
 rule concatenate_filtered_reads:
     output:
-        "genomic_data/pacbio/filtered/concat.filt.fastq.gz"
+        species_dir+"genomic_data/pacbio/filtered/concat.filt.fastq.gz"
     input:
-        expand("genomic_data/pacbio/filtered/{sample}.filt.fastq.gz", sample=FASTQ)
+        expand(species_dir+"genomic_data/pacbio/filtered/{sample}.filt.fastq.gz", sample=FASTQ)
     shell:
         "cat {input} > {output}"
 
 #Perform genome assembly with hifiasm using pacbio reads and hic reads
 rule assembly_hifiams:
     output:
-        hap1 = "results/assembly/assembly.hic.hap1.p_ctg.fa",
-        hap2 = "results/assembly/assembly.hic.hap2.p_ctg.fa"
+        hap1 = species_dir+"results/assembly/assembly.hic.hap1.p_ctg.fa",
+        hap2 = species_dir+"results/assembly/assembly.hic.hap2.p_ctg.fa"
     input:
-        pacbio = "genomic_data/pacbio/filtered/concat.filt.fastq.gz",
-        hicF = expand("genomic_data/hic/{hic}_1.fastq.gz", hic=HIC),
-        hicR = expand("genomic_data/hic/{hic}_2.fastq.gz", hic=HIC)
+        pacbio = species_dir+"genomic_data/pacbio/filtered/concat.filt.fastq.gz",
+        hicF = expand(species_dir+"genomic_data/hic/{hic}_1.fastq.gz", hic=HIC),
+        hicR = expand(species_dir+"genomic_data/hic/{hic}_2.fastq.gz", hic=HIC)
     resources:
         time = config["hifiasm_cluster_time"],
         mem_per_cpu = config["hifiasm_mem_per_cpu"],
@@ -159,7 +164,7 @@ rule assembly_hifiams:
     conda:
         config["hifiasm_conda_env"]
     params:
-        outdir = "results/assembly",
+        outdir = species_dir+"results/assembly",
         threads = config["hifiasm_threads"],
     shell:
         r"""
@@ -187,9 +192,9 @@ rule download_busco_db:
 #Run busco on assembly
 rule busco:
     output:
-        directory(expand("results/{{dir}}/busco_{{assembly}}_{lineage}", lineage=config["busco_lineage"]))
+        directory(expand(species_dir+"results/{{dir}}/busco_{{assembly}}_{lineage}", lineage=config["busco_lineage"]))
     input:
-        assembly = "results/{dir}/{assembly}.fa",
+        assembly = species_dir+"results/{dir}/{assembly}.fa",
         busco = expand("tmp/busco/{lineage}_odb10", lineage=config["busco_lineage"])
     resources:
         mem_per_cpu = config["busco_mem"],
@@ -198,10 +203,11 @@ rule busco:
         config["busco_conda_env"]
     params:
         lineage = config["busco_lineage"],
-        threads = config["busco_threads"]
+        threads = config["busco_threads"],
+        speciesdir = species_dir
     shell:
         r"""
-        busco -i {input.assembly} -l {input.busco} -c {params.threads} -m genome --offline --out_path results/{wildcards.dir} \
+        busco -i {input.assembly} -l {input.busco} -c {params.threads} -m genome --offline --out_path {params.speciesdir}/results/{wildcards.dir} \
         -o busco_{wildcards.assembly}_{params.lineage} --download_path tmp/{input.assembly}_busco
         rm -r tmp/{input.assembly}_busco
         """
@@ -209,9 +215,9 @@ rule busco:
 #Create Meryl Database
 rule create_meryl_db:
     output:
-        directory("results/scaffolding/meryl/assembly.hic.{hap}.p_ctg.meryl"),
+        directory(species_dir+"results/scaffolding/meryl/assembly.hic.{hap}.p_ctg.meryl"),
     input:
-        "results/assembly/assembly.hic.{hap}.p_ctg.fa",
+        species_dir+"results/assembly/assembly.hic.{hap}.p_ctg.fa",
     conda:
         config["meryl_conda_env"]
     resources:
@@ -226,21 +232,21 @@ rule create_meryl_db:
 #Run meryl for filtering Hi-C reads before scaffolding
 rule meryl_filter:
     output:
-        hicFwoH1 = "results/scaffolding/meryl/hicF_hap2.fastq.gz",
-        hicRwoH1 = "results/scaffolding/meryl/hicR_hap2.fastq.gz",
-        hicFwoH2 = "results/scaffolding/meryl/hicF_hap1.fastq.gz",
-        hicRwoH2 = "results/scaffolding/meryl/hicR_hap1.fastq.gz"
+        hicFwoH1 = species_dir+"results/scaffolding/meryl/hicF_hap2.fastq.gz",
+        hicRwoH1 = species_dir+"results/scaffolding/meryl/hicR_hap2.fastq.gz",
+        hicFwoH2 = species_dir+"results/scaffolding/meryl/hicF_hap1.fastq.gz",
+        hicRwoH2 = species_dir+"results/scaffolding/meryl/hicR_hap1.fastq.gz"
     input:
-        hicF = expand("genomic_data/hic/{hic}_1.fastq.gz", hic=HIC),
-        hicR = expand("genomic_data/hic/{hic}_2.fastq.gz", hic=HIC),
-        meryl_hap1 = "results/scaffolding/meryl/assembly.hic.hap1.p_ctg.meryl",
-        meryl_hap2 = "results/scaffolding/meryl/assembly.hic.hap2.p_ctg.meryl"
+        hicF = expand(species_dir+"genomic_data/hic/{hic}_1.fastq.gz", hic=HIC),
+        hicR = expand(species_dir+"genomic_data/hic/{hic}_2.fastq.gz", hic=HIC),
+        meryl_hap1 = species_dir+"results/scaffolding/meryl/assembly.hic.hap1.p_ctg.meryl",
+        meryl_hap2 = species_dir+"results/scaffolding/meryl/assembly.hic.hap2.p_ctg.meryl"
     conda:
         config["meryl_conda_env"]
     resources:
         ntasks = config["meryl_threads"]
     params:
-        outdir = "results/scaffolding/meryl"
+        outdir = species_dir+"results/scaffolding/meryl"
     shell:
         r"""
         meryl difference {input.meryl_hap1} {input.meryl_hap2} output {params.outdir}/only_hap1.meryl
@@ -252,18 +258,18 @@ rule meryl_filter:
 #Prepare filtered Hi-C reads for scaffolding
 rule prepare_hic:
     output:
-        "results/scaffolding/{hap}_hic_markdup.sort_n.bam"
+        species_dir+"results/scaffolding/{hap}_hic_markdup.sort_n.bam"
     input:
-        assembly = "results/assembly/assembly.hic.{hap}.p_ctg.fa",
-        hicF = "results/scaffolding/meryl/hicF_{hap}.fastq.gz",
-        hicR = "results/scaffolding/meryl/hicR_{hap}.fastq.gz"
+        assembly = species_dir+"results/assembly/assembly.hic.{hap}.p_ctg.fa",
+        hicF = species_dir+"results/scaffolding/meryl/hicF_{hap}.fastq.gz",
+        hicR = species_dir+"results/scaffolding/meryl/hicR_{hap}.fastq.gz"
     conda:
         config["yahs_conda_env"]
     resources:
         ntasks = config["yahs_threads"],
     params:
         t = int(config["yahs_threads"]) - 6,
-        outdir = "results/scaffolding"
+        outdir =species_dir+ "results/scaffolding"
     shell:
         r"""
         bwa index {input.assembly}
@@ -280,10 +286,10 @@ rule prepare_hic:
 #Run scaffolding with yahs
 rule scaffold_hap:
     output:
-        "results/scaffolding/{hap}_scaffolds_final.fa"
+        species_dir+"results/scaffolding/{hap}_scaffolds_final.fa"
     input:
-        assembly = "results/assembly/assembly.hic.{hap}.p_ctg.fa",
-        bamfile = "results/scaffolding/{hap}_hic_markdup.sort_n.bam"
+        assembly = species_dir+"results/assembly/assembly.hic.{hap}.p_ctg.fa",
+        bamfile = species_dir+"results/scaffolding/{hap}_hic_markdup.sort_n.bam"
     conda:
         config["yahs_conda_env"]
     resources:
@@ -291,7 +297,7 @@ rule scaffold_hap:
         time = config["yahs_cluster_time"]
     params:
         yahs_path = config["yahs_install_path"],
-        outdir = "results/scaffolding"
+        outdir = species_dir+"results/scaffolding"
     shell:
         r"""
         PATH={params.yahs_path}:$PATH

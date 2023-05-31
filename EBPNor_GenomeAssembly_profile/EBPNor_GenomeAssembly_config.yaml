@@ -1,3 +1,7 @@
+### Working directory ###
+#Define the absolute path to the species directory containing the input files (see Readme)
+species_dir: "path/to/species/dir" 
+
 ### Adapterfilt parameters ###
 adapterfilt_install_dir: "/cluster/projects/nn8013k/opt/HiFiAdapterFilt"
 adapterfilt_modules: ["GCC/11.2.0", "CMake/3.21.1-GCCcore-11.2.0"]
