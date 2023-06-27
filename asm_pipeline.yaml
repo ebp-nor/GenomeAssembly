@@ -1,0 +1,17 @@
+name: asm_pipeline
+channels:
+  - bioconda
+  - conda-forge
+dependencies:
+  - gfastats
+  - samtools
+  - bwa
+  - yahs
+  - hifiasm=0.19.5
+  - blast
+  - busco=5.4.7
+  - smudgeplot
+  - genomescope2
+  - bamtools
+  - snakemake
+  - merqury
