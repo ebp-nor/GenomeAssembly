@@ -12,7 +12,7 @@ HIC, = glob_wildcards(species_dir+"genomic_data/hic/{sample}_1.fastq.gz")
 HAPS = ["hap1", "hap2"]
 
 #Define rules that do not need to be submitted to the cluster
-localrules: concatenate_filtered_reads, download_busco_db
+localrules: concatenate_filtered_reads
 
 #Summary rule to run full pipeline (pre-assembly, assembly, scaffolding)
 rule all:
@@ -47,8 +47,8 @@ rule hifiadapterfilt:
         expand(species_dir+"genomic_data/pacbio/{sample}.fastq.gz", sample=FASTQ)
     resources:
         ntasks = config["adapterfilt_threads"]
-    conda:
-        config["adapterfilt_conda_env"]
+#    conda:
+#        config["adapterfilt_conda_env"]
     params:
         threads = config["adapterfilt_threads"],
         installdir = config["adapterfilt_install_dir"],
@@ -58,7 +58,7 @@ rule hifiadapterfilt:
     shell:
         r"""
         module load {params.modules}
-        export PATH={params.installdir}/DB:{params.intstalldir}:$PATH
+        export PATH={params.installdir}/DB:{params.installdir}:$PATH
         mkdir -p {params.tempdir}
         export TMPDIR={params.tempdir}
         cd {params.workdir}/genomic_data/pacbio/
@@ -72,8 +72,8 @@ rule count_kmers:
         species_dir+"results/pre_assembly/reads.histo"
     input:
         expand(species_dir+"genomic_data/pacbio/{sample}.fastq.gz", sample=FASTQ)
-    conda:
-        config["GS_conda_env"]
+ #   conda:
+ #       config["GS_conda_env"]
     resources:
         ntasks = config["KMC_t"]
     params:
@@ -99,8 +99,8 @@ rule genomescope:
         expand(species_dir+"results/pre_assembly/genomescope/genomescope_ploidy{ploidy}.out", ploidy=config["GS_ploidy_range"])
     input:
         species_dir+"results/pre_assembly/reads.histo"
-    conda:
-        config["GS_conda_env"]
+  #  conda:
+  #      config["GS_conda_env"]
     params:
         outdir = species_dir+"results/pre_assembly/genomescope",
         ploidy_range = config["GS_ploidy_range"],
@@ -118,8 +118,8 @@ rule smudgeplot:
         expand(species_dir+"results/pre_assembly/smudgeplot/ploidy{ploidy}_smudgeplot.png", ploidy=config["smudge_ploidy"]),
     input:
         species_dir+"results/pre_assembly/reads.histo"
-    conda:
-        config["smudge_conda_env"]
+  #  conda:
+  #      config["smudge_conda_env"]
     params:
         indir = species_dir+"results/pre_assembly",
         outdir = species_dir+"results/pre_assembly/smudgeplot",
@@ -131,7 +131,6 @@ rule smudgeplot:
         r"""
         L=$(smudgeplot.py cutoff {input} L)
         U=$(smudgeplot.py cutoff {input} U)
-        module load {params.module}
         export PATH={params.kmc_path}/bin:$PATH
         kmc_tools transform {params.indir}/reads -ci$L -cx$U reduce {params.outdir}/kmcdb_L"$L"_U"$U"
         smudge_pairs {params.outdir}/kmcdb_L"$L"_U"$U" {params.outdir}/kmcdb_L"$L"_U"$U"_coverages.tsv {params.outdir}/kmcdb_L"$L"_U"$U"_pairs.tsv > {params.outdir}/kmcdb_L"$L"_U"$U"_familysizes.tsv
@@ -161,8 +160,8 @@ rule assembly_hifiams:
         time = config["hifiasm_cluster_time"],
         mem_per_cpu = config["hifiasm_mem_per_cpu"],
         ntasks = config["hifiasm_threads"]
-    conda:
-        config["hifiasm_conda_env"]
+  #  conda:
+   #     config["hifiasm_conda_env"]
     params:
         outdir = species_dir+"results/assembly",
         threads = config["hifiasm_threads"],
@@ -175,19 +174,19 @@ rule assembly_hifiams:
         """
 
 #Download busco_db before submitting busco job
-rule download_busco_db:
-    output:
-        temporary(directory(expand("tmp/busco/{lineage}_odb10", lineage=config["busco_lineage"])))
-    conda:
-        config["busco_conda_env"]
-    params:
-        lineage = config["busco_lineage"]
-    shell:
-        r"""
-        busco --download {params.lineage}_odb10
-        mv busco_downloads/lineages/{params.lineage}_odb10 {output}
-        rm -r busco*
-        """
+#rule download_busco_db:
+#    output:
+#        temporary(directory(expand("tmp/busco/{lineage}_odb10", lineage=config["busco_lineage"])))
+    #conda:
+     #   config["busco_conda_env"]
+#    params:
+#        lineage = config["busco_lineage"]
+#    shell:
+#        r"""
+#        busco --download {params.lineage}_odb10
+#        mv busco_downloads/lineages/{params.lineage}_odb10 {output}
+#        rm -r busco*
+#        """
 
 #Run busco on assembly
 rule busco:
@@ -195,12 +194,12 @@ rule busco:
         directory(expand(species_dir+"results/{{dir}}/busco_{{assembly}}_{lineage}", lineage=config["busco_lineage"]))
     input:
         assembly = species_dir+"results/{dir}/{assembly}.fa",
-        busco = expand("tmp/busco/{lineage}_odb10", lineage=config["busco_lineage"])
+        busco = expand("{db_dir}/{lineage}_odb10", db_dir=config["busco_db_dir"], lineage=config["busco_lineage"])
     resources:
         mem_per_cpu = config["busco_mem"],
         ntasks = config["busco_threads"]
-    conda:
-        config["busco_conda_env"]
+    #conda:
+    #    config["busco_conda_env"]
     params:
         lineage = config["busco_lineage"],
         threads = config["busco_threads"],
@@ -218,8 +217,8 @@ rule create_meryl_db:
         directory(species_dir+"results/scaffolding/meryl/assembly.hic.{hap}.p_ctg.meryl"),
     input:
         species_dir+"results/assembly/assembly.hic.{hap}.p_ctg.fa",
-    conda:
-        config["meryl_conda_env"]
+    #conda:
+     #   config["meryl_conda_env"]
     resources:
         ntasks = config["meryl_threads"]
     params:
@@ -241,8 +240,8 @@ rule meryl_filter:
         hicR = expand(species_dir+"genomic_data/hic/{hic}_2.fastq.gz", hic=HIC),
         meryl_hap1 = species_dir+"results/scaffolding/meryl/assembly.hic.hap1.p_ctg.meryl",
         meryl_hap2 = species_dir+"results/scaffolding/meryl/assembly.hic.hap2.p_ctg.meryl"
-    conda:
-        config["meryl_conda_env"]
+    #conda:
+    #    config["meryl_conda_env"]
     resources:
         ntasks = config["meryl_threads"]
     params:
@@ -263,8 +262,8 @@ rule prepare_hic:
         assembly = species_dir+"results/assembly/assembly.hic.{hap}.p_ctg.fa",
         hicF = species_dir+"results/scaffolding/meryl/hicF_{hap}.fastq.gz",
         hicR = species_dir+"results/scaffolding/meryl/hicR_{hap}.fastq.gz"
-    conda:
-        config["yahs_conda_env"]
+    #conda:
+    #    config["yahs_conda_env"]
     resources:
         ntasks = config["yahs_threads"],
     params:
@@ -290,17 +289,15 @@ rule scaffold_hap:
     input:
         assembly = species_dir+"results/assembly/assembly.hic.{hap}.p_ctg.fa",
         bamfile = species_dir+"results/scaffolding/{hap}_hic_markdup.sort_n.bam"
-    conda:
-        config["yahs_conda_env"]
+    #conda:
+    #    config["yahs_conda_env"]
     resources:
         ntasks = config["yahs_threads"],
         time = config["yahs_cluster_time"]
     params:
-        yahs_path = config["yahs_install_path"],
         outdir = species_dir+"results/scaffolding"
     shell:
         r"""
-        PATH={params.yahs_path}:$PATH
         yahs {input.assembly} {input.bamfile} -o {params.outdir}/{wildcards.hap} 1> {params.outdir}/yahs_{wildcards.hap}.out 2> {params.outdir}/yahs_{wildcards.hap}.err
         gfastats {output} > {params.outdir}/{wildcards.hap}_scaffolds_final.stats
         """

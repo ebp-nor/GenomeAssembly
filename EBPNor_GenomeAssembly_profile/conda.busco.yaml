@@ -3,5 +3,5 @@ channels:
   - bioconda
   - conda-forge
 dependencies:
-  - busco=5.4.7
+  - busco
 prefix: /cluster/projects/nn8013k/programs/miniconda3/envs/busco5
