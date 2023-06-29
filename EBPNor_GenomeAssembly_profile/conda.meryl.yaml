@@ -1,8 +1,0 @@
-name: /cluster/projects/nn8013k/programs/miniconda3/envs/merqury
-channels:
-  - bioconda
-  - conda-forge
-dependencies:
-  - merqury
-  - meryl
-prefix: /cluster/projects/nn8013k/programs/miniconda3/envs/merqury

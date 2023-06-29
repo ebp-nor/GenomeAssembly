@@ -1,7 +1,0 @@
-name: /cluster/projects/nn8013k/programs/miniconda3/envs/busco5
-channels:
-  - bioconda
-  - conda-forge
-dependencies:
-  - busco
-prefix: /cluster/projects/nn8013k/programs/miniconda3/envs/busco5

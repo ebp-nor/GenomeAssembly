@@ -1,8 +1,0 @@
-name: /cluster/projects/nn8013k/programs/miniconda3/envs/hifiadapterfilt
-channels:
-  - bioconda
-  - conda-forge
-dependencies:
-  - bamtools
-  - blast
-prefix: /cluster/projects/nn8013k/programs/miniconda3/envs/hifiadapterfilt

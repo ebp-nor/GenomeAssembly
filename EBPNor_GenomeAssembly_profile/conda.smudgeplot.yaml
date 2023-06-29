@@ -1,8 +1,0 @@
-name: /cluster/projects/nn8013k/programs/miniconda3/envs/smudgeplot
-channels:
-  - bioconda
-  - conda-forge
-dependencies:
-  - kmc
-  - smudgeplot
-prefix: /cluster/projects/nn8013k/programs/miniconda3/envs/smudgeplot
