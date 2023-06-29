@@ -1,0 +1,36 @@
+### General Snakemake settings ###
+latency-wait: 60
+keep-going: True
+rerun-incomplete: True
+printshellcmds: True
+scheduler: greedy
+use-conda: True
+local-cores: 2
+jobs: 50
+
+### Settings for cluster submission with slurm ###
+cluster:
+  mkdir -p logs/{rule} &&
+  sbatch
+    --account=nn8013k
+    --partition={resources.partition}
+    --time={resources.time}
+    --mem-per-cpu={resources.mem_per_cpu}
+    --nodes=1
+    --cpus-per-task={resources.cpu_per_task}
+    --ntasks-per-node={resources.ntasks}
+    --job-name=smk-{rule}-{wildcards}
+    --output=logs/{rule}/{rule}-{wildcards}-%j.out
+    --error=logs/{rule}/{rule}-{wildcards}-%j.err
+    --parsable
+#    --mail-user=user@email.com
+#    --mail-type=ALL
+default-resources:
+    - partition="normal"
+    - time="48:00:00"
+    - ntasks="10"
+    - mem_per_cpu="4500M"
+    - cpu_per_task="1"
+cluster-cancel: scancel
+cluster-status: status-sacct.sh
+max-jobs-per-second: 10
