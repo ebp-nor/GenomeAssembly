@@ -61,7 +61,7 @@ rule hifiadapterfilt:
     shell:
         r"""
         module load {params.modules}
-        export PATH={params.installdir}/DB:{params.intstalldir}:$PATH
+        export PATH={params.installdir}/DB:{params.installdir}:$PATH
         mkdir -p {params.tempdir}
         export TMPDIR={params.tempdir}
         cd {params.workdir}/genomic_data/pacbio/
