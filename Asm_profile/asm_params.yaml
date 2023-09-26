@@ -1,10 +1,9 @@
 ### Working directory ###
 #Define the absolute path to the species directory containing the input files (see Readme)
-species_dir: "/cluster/projects/nn8013k/SnakemakeTest"
+species_dir: "/path/to/input/data"
 
 ### Adapterfilt parameters ###
 adapterfilt_install_dir: "/cluster/projects/nn8013k/opt/HiFiAdapterFilt"
-adapterfilt_modules: ["GCC/11.2.0", "CMake/3.21.1-GCCcore-11.2.0"]
 adapterfilt_threads: "16"
 
 ### KMC k-mer counting parameters ###
@@ -22,7 +21,6 @@ GS_ploidy_range: ["1", "2", "4"] #ploidy levels to check
 ### Smudgeplot parameters ###
 smudge_ploidy: "2" #assumed ploidy level
 smudge_mem: "60G" #memory requirements
-smudge_module: "Python/3.7.2-GCCcore-8.2.0" #additional module to load when using low-memory mode
 
 ### HifiAsm Assembly parameters ###
 hifiasm_threads: "10" #threads

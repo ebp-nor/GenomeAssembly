@@ -40,6 +40,7 @@ rule scaffolding:
         expand(species_dir+"results/assembly/busco_assembly.hic.{hap}.p_ctg_{lineage}", lineage=config["busco_lineage"], hap=HAPS),
         expand(species_dir+"results/scaffolding/busco_{hap}_scaffolds_final_{lineage}", lineage=config["busco_lineage"], hap=HAPS)
 
+#General rule for generationg a decontaminated assembly, but without running busco
 rule decontamination:
     input:
         expand(species_dir+"results/decontamination/{hap}/{hap}_scaffolds_final.decon.fasta", hap=HAPS)
@@ -55,12 +56,10 @@ rule hifiadapterfilt:
     params:
         threads = config["adapterfilt_threads"],
         installdir = config["adapterfilt_install_dir"],
-        modules = config["adapterfilt_modules"],
         workdir = species_dir,
         tempdir = species_dir+"temp",
     shell:
         r"""
-        module load {params.modules}
         export PATH={params.installdir}/DB:{params.installdir}:$PATH
         mkdir -p {params.tempdir}
         export TMPDIR={params.tempdir}
@@ -124,17 +123,14 @@ rule smudgeplot:
         outdir = species_dir+"results/pre_assembly/smudgeplot",
         ploidy = config["smudge_ploidy"],
         kmc_path = config["KMC_path"],
-        module = config["smudge_module"],
         k = config["KMC_k"],
     shell:
         r"""
         L=$(smudgeplot.py cutoff {input} L)
         U=$(smudgeplot.py cutoff {input} U)
-        module load {params.module}
         export PATH={params.kmc_path}/bin:$PATH
         kmc_tools transform {params.indir}/reads -ci$L -cx$U reduce {params.outdir}/kmcdb_L"$L"_U"$U"
         smudge_pairs {params.outdir}/kmcdb_L"$L"_U"$U" {params.outdir}/kmcdb_L"$L"_U"$U"_coverages.tsv {params.outdir}/kmcdb_L"$L"_U"$U"_pairs.tsv > {params.outdir}/kmcdb_L"$L"_U"$U"_familysizes.tsv
-        module unload {params.module}
         smudgeplot.py plot {params.outdir}/kmcdb_L"$L"_U"$U"_coverages.tsv -o {params.outdir}/ploidy{params.ploidy} -k {params.k}
         """
 
@@ -162,14 +158,20 @@ rule assembly_hifiams:
         ntasks = config["hifiasm_threads"]
     params:
         outdir = species_dir+"results/assembly",
+        indir = species_dir+"genomic_data/",
         threads = config["hifiasm_threads"],
+        h1 = expand("hic/{hic}_1.fastq.gz", hic=HIC),
+        h2 = expand("hic/{hic}_2.fastq.gz", hic=HIC),
+        pacbio = "pacbio/filtered/concat.filt.fastq.gz"
     shell:
         r"""
-        hifiasm -o {params.outdir}/assembly -t{params.threads} --h1 {input.hicF} --h2 {input.hicR} {input.pacbio} \
-        1> {params.outdir}/hifiasm_"`date +\%y\%m\%d_\%H\%M\%S`".out 2> {params.outdir}/hifiasm_"`date +\%y\%m\%d_\%H\%M\%S`".err
+        cd {params.indir}
+        hifiasm -o assembly -t{params.threads} --h1 {params.h1} --h2 {params.h2} {params.pacbior}
+        mv assembly.* {params.outdir}/
         awk '/^S/{{print ">"$2"\n"$3}}' {params.outdir}/assembly.hic.hap1.p_ctg.gfa | fold > {output.hap1}
         awk '/^S/{{print ">"$2"\n"$3}}' {params.outdir}/assembly.hic.hap2.p_ctg.gfa | fold > {output.hap2}
         """
+
 
 #Run busco on assembly
 rule busco:
@@ -188,8 +190,7 @@ rule busco:
     shell:
         r"""
         busco -i {input.assembly} -l {input.busco} -c {params.threads} -m genome --offline --out_path {params.speciesdir}/results/{wildcards.dir} \
-        -o busco_{wildcards.assembly}_{params.lineage} --download_path tmp/{input.assembly}_busco
-        rm -r tmp/{input.assembly}_busco
+        -o busco_{wildcards.assembly}_{params.lineage} --download_path /tmp
         """
 
 #Create Meryl Database
@@ -244,19 +245,22 @@ rule prepare_hic:
     resources:
         ntasks = config["yahs_threads"],
     params:
-        t = int(config["yahs_threads"]) - 6,
+        t = config["yahs_threads"],
         outdir =species_dir+ "results/scaffolding",
     shell:
         r"""
         bwa index {input.assembly}
-        samtools faidx {input.assembly} 
+        samtools faidx {input.assembly}
         bwa mem -t {params.t} -R '@RG\tSM:{wildcards.hap}\tID:{wildcards.hap}' -5SPM {input.assembly} {input.hicF} {input.hicR} \
-        | samtools view -buS - \
-        | samtools sort -@3 -n -T {params.outdir}/{wildcards.hap}_tmp_n -O bam - \
-        | samtools fixmate -mr - - \
-        | samtools sort -@3 -T {params.outdir}/{wildcards.hap}_hic_tmp -O bam \
-        | samtools markdup -rsS - - 2> {params.outdir}/{wildcards.hap}_hic_markdup.stats \
-        | samtools sort -n -@3 -n -T {params.outdir}/{wildcards.hap}_temp_n -O bam > {output}
+        | samtools view -buS - > {params.outdir}/{wildcards.hap}_mapping.bam
+        samtools sort -@{params.t} -n -T {params.outdir}/{wildcards.hap}_tmp_n -O bam {params.outdir}/{wildcards.hap}_mapping.bam \
+        | samtools fixmate -mr - - > {params.outdir}/{wildcards.hap}_mapping.fixmate.bam
+        samtools sort -@{params.t} -T {params.outdir}/{wildcards.hap}_hic_tmp -O bam {params.outdir}/{wildcards.hap}_mapping.fixmate.bam \
+        | samtools markdup -rsS - - 2> {params.outdir}/{wildcards.hap}_hic_markdup.stats > {params.outdir}/{wildcards.hap}_mapping.markdup.bam
+        samtools sort -@{params.t} -n -T {params.outdir}/{wildcards.hap}_temp_n -O bam {params.outdir}/{wildcards.hap}_mapping.markdup.bam > {output}
+        if [ -f {output} ]; then
+        rm {params.outdir}/{wildcards.hap}_mapping.bam {params.outdir}/{wildcards.hap}_mapping.fixmate.bam {params.outdir}/{wildcards.hap}_mapping.markdup.bam
+        fi
         """
 
 #Run scaffolding with yahs
@@ -277,7 +281,7 @@ rule scaffold_hap:
         gfastats {output} > {params.outdir}/{wildcards.hap}_scaffolds_final.stats
         """
  
- #Remove adaptors and vector contamination
+#Remove adaptors and vector contamination
 rule fcs_adaptor:
     output:
         species_dir+"results/decontamination/{hap}/{hap}_scaffolds_final.clean.fa"
@@ -327,5 +331,4 @@ rule fcs_gx:
         --action-report {params.outdir}/{wildcards.hap}/gx_output/*.fcs_gx_report.txt --output {output} \
         --contam-fasta-out {params.outdir}/{wildcards.hap}/contam.fasta
         """
-        
- 
+		
