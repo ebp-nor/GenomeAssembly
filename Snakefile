@@ -12,7 +12,7 @@ HIC, = glob_wildcards(species_dir+"genomic_data/hic/{sample}_1.fastq.gz")
 HAPS = ["hap1", "hap2"]
 
 #Define rules that do not need to be submitted to the cluster
-localrules: concatenate_filtered_reads
+localrules: concatenate_filtered_reads, print_versions
 
 #Summary rule to run full pipeline (pre-assembly, assembly, scaffolding)
 rule all:
@@ -21,29 +21,34 @@ rule all:
         expand(species_dir+"results/pre_assembly/smudgeplot/ploidy{ploidy}_smudgeplot.png", ploidy=config["smudge_ploidy"]),
         expand(species_dir+"results/assembly/busco_assembly.hic.{hap}.p_ctg_{lineage}", lineage=config["busco_lineage"], hap=HAPS),
         expand(species_dir+"results/scaffolding/busco_{hap}_scaffolds_final_{lineage}", lineage=config["busco_lineage"], hap=HAPS),
-        expand(species_dir+"results/decontamination/{hap}/{hap}_scaffolds_final.decon.fasta", hap=HAPS)
+        expand(species_dir+"results/decontamination/{hap}/{hap}_scaffolds_final.decon.fasta", hap=HAPS),
+        species_dir+"software_versions.txt"
 
 #Summary rule to run all pre-assembly steps
 rule pre_assembly:
     input:
         expand(species_dir+"results/pre_assembly/genomescope/genomescope_ploidy{ploidy}.out", ploidy=config["GS_ploidy_range"]),
-        expand(species_dir+"results/pre_assembly/smudgeplot/ploidy{ploidy}_smudgeplot.png", ploidy=config["smudge_ploidy"])
+        expand(species_dir+"results/pre_assembly/smudgeplot/ploidy{ploidy}_smudgeplot.png", ploidy=config["smudge_ploidy"]),
+        species_dir+"software_versions.txt"
 
 #General rule for running only primary assembly and busco
 rule assembly:
     input:
-        expand(species_dir+"results/assembly/busco_assembly.hic.{hap}.p_ctg_{lineage}", lineage=config["busco_lineage"], hap=HAPS)
+        expand(species_dir+"results/assembly/busco_assembly.hic.{hap}.p_ctg_{lineage}", lineage=config["busco_lineage"], hap=HAPS),
+        species_dir+"software_versions.txt"
         
 #General rule for generated the scaffolded haplotype assemblies (withouth pre-assembly) and busco
 rule scaffolding:
     input:
         expand(species_dir+"results/assembly/busco_assembly.hic.{hap}.p_ctg_{lineage}", lineage=config["busco_lineage"], hap=HAPS),
-        expand(species_dir+"results/scaffolding/busco_{hap}_scaffolds_final_{lineage}", lineage=config["busco_lineage"], hap=HAPS)
+        expand(species_dir+"results/scaffolding/busco_{hap}_scaffolds_final_{lineage}", lineage=config["busco_lineage"], hap=HAPS),
+        species_dir+"software_versions.txt"
 
 #General rule for generationg a decontaminated assembly, but without running busco
 rule decontamination:
     input:
-        expand(species_dir+"results/decontamination/{hap}/{hap}_scaffolds_final.decon.fasta", hap=HAPS)
+        expand(species_dir+"results/decontamination/{hap}/{hap}_scaffolds_final.decon.fasta", hap=HAPS),
+        species_dir+"software_versions.txt"
 
 #Filter PacBio HiFi reads
 rule hifiadapterfilt:
@@ -332,3 +337,30 @@ rule fcs_gx:
         --contam-fasta-out {params.outdir}/{wildcards.hap}/contam.fasta
         """
 		
+rule print_versions:
+    output:
+        species_dir+"software_versions.txt"
+    params:
+        kmc_path = config["KMC_path"],
+        hifiadapterfilt = config["adapterfilt_install_dir"],
+        fcs_path = config["fcs_path"]
+        outdir = species_dir
+    shell:
+        r"""
+        printf "Conda software versions:\n" > {output}
+        conda list -e | grep -v "^#" >> {output}
+        printf "\nOther software versions:\n" >> {output}
+        printf "KMC version:\t" >> {output}
+        {params.kmc_path}/bin/kmc --version | head -n 1 >> {output}
+        printf "\nHiFi Adapterfilt version:\t" >> {output}
+        bash {params.hifiadapterfilt}/hifiadapterfilt.sh --version >> {output}
+        printf "\nNCBI FCS versions:\n" >> {output}
+        printf "fcsadaptor:\t" >> {output}
+        cat {params.fcs_path}/run_fcsadaptor.sh | grep "^DEFAULT_VERSION" >> {output}
+        printf "fcs.py:\t" >> {output}
+        cat {params.fcs_path}/fcs.py | grep "^DEFAULT_VERSION" >> {output}
+        if [ -d logs/ ]; then
+        cp -r logs {params.outdir}/logs
+        fi
+        """
+
