@@ -336,7 +336,16 @@ rule fcs_gx:
         --action-report {params.outdir}/{wildcards.hap}/gx_output/*.fcs_gx_report.txt --output {output} \
         --contam-fasta-out {params.outdir}/{wildcards.hap}/contam.fasta
         """
+<<<<<<< HEAD
+<<<<<<<< HEAD:workflow/Snakefile
 #Print software versions to file and copy slurm logs to output directory
+========
+
+#Print software versionst to file and copy slurm logs to output directory		
+>>>>>>>> afcdd8f9304e2552c6cc189943a5cea17506366d:Snakefile
+=======
+#Print software versionst to file and copy slurm logs to output directory
+>>>>>>> afcdd8f9304e2552c6cc189943a5cea17506366d
 rule print_versions:
     output:
         species_dir+"software_versions.txt"
