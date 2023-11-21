@@ -336,7 +336,8 @@ rule fcs_gx:
         --action-report {params.outdir}/{wildcards.hap}/gx_output/*.fcs_gx_report.txt --output {output} \
         --contam-fasta-out {params.outdir}/{wildcards.hap}/contam.fasta
         """
-#Print software versionst to file and copy slurm logs to output directory
+
+#Print software versionst to file and copy slurm logs to output directory		
 rule print_versions:
     output:
         species_dir+"software_versions.txt"
