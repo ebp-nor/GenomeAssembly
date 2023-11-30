@@ -68,9 +68,9 @@ rule hifiadapterfilt:
     shell:
         r"""
         export PATH={params.installdir}/DB:{params.installdir}:$PATH
+        cd {params.input_dir}/genomic_data/pacbio/
         mkdir -p temp
         export TMPDIR=./temp
-        cd {params.input_dir}/genomic_data/pacbio/
         pbadapterfilt.sh \
             -t {params.threads} \
             -o filtered
@@ -163,7 +163,7 @@ rule smudgeplot:
             results/pre_assembly/smudgeplot/kmcdb_L"$L"_U"$U"_coverages.tsv \
             results/pre_assembly/smudgeplot/kmcdb_L"$L"_U"$U"_pairs.tsv \
             > results/pre_assembly/smudgeplot/kmcdb_L"$L"_U"$U"_familysizes.tsv
-        smudgeplot.py plot 
+        smudgeplot.py plot \
             results/pre_assembly/smudgeplot/kmcdb_L"$L"_U"$U"_coverages.tsv \
             -o results/pre_assembly/smudgeplot/ploidy{params.ploidy} \
             -k {params.k}
@@ -198,6 +198,7 @@ rule assembly_hifiams:
         h2 = expand("hic/{hic}_2.fastq.gz", hic=HIC)
     shell:
         r"""
+        export CWD=$PWD
         cd {params.indir}
         hifiasm \
             -o assembly \
@@ -205,11 +206,11 @@ rule assembly_hifiams:
             --h1 {params.h1} \
             --h2 {params.h2} \
             pacbio/filtered/concat.filt.fastq.gz
-        mv assembly.* results/assembly
-        awk '/^S/{{print ">"$2"\n"$3}}' results/assembly/assembly.hic.hap1.p_ctg.gfa \
-            | fold > {output.hap1}
-        awk '/^S/{{print ">"$2"\n"$3}}' results/assembly/assembly.hic.hap2.p_ctg.gfa \
-            | fold > {output.hap2}
+        mv assembly.* $CWD/results/assembly
+        awk '/^S/{{print ">"$2"\n"$3}}' $CWD/results/assembly/assembly.hic.hap1.p_ctg.gfa \
+            | fold > $CWD/{output.hap1}
+        awk '/^S/{{print ">"$2"\n"$3}}' $CWD/results/assembly/assembly.hic.hap2.p_ctg.gfa \
+            | fold > $CWD/{output.hap2}
         """
 
 
@@ -259,7 +260,7 @@ rule create_meryl_db:
             memory={params.m} \
             count \
             output {output} \
-            {input}"
+            {input}
         """
         
 #Run meryl for filtering Hi-C reads before scaffolding
@@ -439,7 +440,7 @@ rule print_versions:
     params:
         kmc_path = config["KMC_path"],
         hifiadapterfilt = config["adapterfilt_install_dir"],
-        fcs_path = config["fcs_path"],
+        fcs_path = config["fcs_path"]
     shell:
         r"""
         printf "Conda software versions:\n" > {output}
@@ -454,8 +455,5 @@ rule print_versions:
         cat {params.fcs_path}/run_fcsadaptor.sh | grep "^DEFAULT_VERSION" >> {output}
         printf "fcs.py:\t" >> {output}
         cat {params.fcs_path}/fcs.py | grep "^DEFAULT_VERSION" >> {output}
-        if [ -d logs/ ]; then
-        cp -r logs results/
-        fi
         """
 
