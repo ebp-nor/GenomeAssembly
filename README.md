@@ -24,10 +24,12 @@ The following software need to be installed manually:
 
 - KMC v3.1.1 (https://github.com/tbenavi1/KMC)
 - HiFiAdapterFilt (https://github.com/sheinasim/HiFiAdapterFilt)
+- Oatk (https://github.com/c-zhou/oatk)
+- OatkDB (https://github.com/c-zhou/OatkDB)
 - NCBI FCS-Adaptor (https://github.com/ncbi/fcs/wiki/FCS-adaptor)
 - NCBI FCS-GX (https://github.com/ncbi/fcs/wiki/FCS-GX)
 
-Please refer to their respective installation instructions to properly install them.
+Please refer to their respective installation instructions to properly install them. You will need to privide the installation paths of these software to the config file (see Parameter section).
 
 ### BUSCO database setup
 
@@ -42,26 +44,26 @@ You will need to specify the folder where you downloaded the busco lineages in t
 
 ### Data
 
-In its current setup, the pipeline requires both PacBio HiFi data and paired-end Hi-C data.
-You need to create a directory which will hold all input and output files.
-This directory should have the following structure:
-The directory contains a subdirectory named "genomic_data", which contains two subdirectories:
-1) A directory called "pacbio" containing one or multiple PacBio HiFi read files (*each ending in .fastq.gz*)
-2) A directory called "hic" containing one pair of Hi-C Illumina reads (*ending in _1.fastq.gz and _2.fastq.gz*)
-
-The absolute path of this directory needs to be specified in the config/asm_params.yaml file (see Parameter section)
+This pipeline is created for using PacBio HiFi reads together with paired-end Hi-C data.
+You will need to specify the absolute paths to these files in the config file (see Parameters section).
 
 ### Parameters
 
 The necessary config files for running the pipeline can be found in the config folder.
 
 General snakemake and cluster submission parameters are defined in ```config/config.yaml```, 
-software-specific parameters are defined in ```config/asm_params.yaml```.
+data- and software-specfic parameters are defined in ```config/asm_params.yaml```.
+
+First, define the paths of the input files you want to use:
+- pacbio: path to the location of the PacBio HiFi reads (```.fastq.gz```)
+- hicF and hicR: path to the forward and reverse HiC reads respectively
 
 For software not installed by conda, the installation path needs to be provided to the Snakemake pipeline by editing following parameters in the ```config/asm_params.yaml```:
 
 - Set the "adapterfilt_install_dir" parameter to the installation path of HiFiAdapterFilt
 - Set the "KMC_path" parameter to the installation path of KMC
+- Set the "oatk_dir" parameter to the installation path of oatk
+- Set the "oatk_db" parameter to the directory where you downloaded the oatk_db files
 - Set the "fcs_path" parameter to the location of the ```run_fcsadaptor.sh``` and ```fcs.py``` scripts
 - Set the "fcs_adaptor_image" and "fcs_gx_image" parameters to the paths to the ```fcs-adaptor.sif``` and ```fcs-gx.sif``` files respectively
 - Set the "fcs_gx_db" parameter to the path of the fcs-gx database
@@ -71,6 +73,8 @@ A couple of other parameters need to be verified as well in the config/asm_param
 - The location of the input data (```input_dir```) should be set to the folder containing the input data.
 - The location of the downloaded busco lineages (```busco_db_dir```) should be set to the folder containing the busco lineages files downloaded earlier
 - The required BUSCO lineage for running the BUSCO analysis needs to set (```busco_lineage``` parameter). Run ```busco --list-datasets``` to get an overview of all available datasets.
+- The required oatk lineage for running organelle genome assembly (```oatk_lineage``` parameter). Check https://github.com/c-zhou/OatkDB for an overview of available lineages.
+- A boolean value wether the species is plant (for plastid prediction) or not (```oatk_isPlant```; set to either True or False)
 - The NCBI taxid of your species, required for the decontamination step (```taxid``` parameter)
 
 ## Usage and run modes
@@ -92,12 +96,12 @@ The workflow parameters can be modified in 3 ways:
 
 The pipeline has different runing modes, and the run mode should always be the last argument on the command line:
 
-- "all" (default): will run the full workflow including pre-assembly (genomescope & smudgeplot), assembly, scaffolding, and decontamination
+- "all" (default): will run the full workflow including pre-assembly (genomescope & smudgeplot), assembly, scaffolding, decontamination, and organelle assembly
 - "pre_assembly": will run only the pre-assembly steps (genomescope & smudgeplot)
 - "assembly": will filter the HiFi reads and assemble them using hifiasm (also using the Hi-C reads), and run busco
 - "scaffolding": will run all steps necessary for scaffolding (filtering, assembly, HiC filtering, scaffolding, busco), but without pre-assembly
 - "decontamination": will run assembly, scaffolding, and decontamination, but without pre-assembly and busco analyses
-
+- "organelles": will run only organnelle genome assembly
 ## Output
 
 All generated output will be present in the "results" directory, which will be created in the folder from where you invoke the snakemake command.
@@ -108,6 +112,7 @@ This results directory contains different subdirectories related to the differen
   - meryl: meryl databases used for filtering HiC reads
   - yahs: scaffolding output, including final scaffolds and their corresponding busco results
 - results/decontamination: decontamination output of the final scaffolded assembly
+- results/organelles: assembled organellar genomes
 
 Additionally, a text file containing all software versions will be created in the specified input directory.
-The log files of the different steps in the workflow can be found in the ```logs``` directory located in the input directory.
+The log files of the different steps in the workflow can be found in the ```logs``` directory that will be created.

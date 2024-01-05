@@ -1,21 +1,25 @@
-#Get input directory from config
-input_dir = config["input_dir"]
-if not input_dir.endswith("/"):
-    input_dir += "/"
-
-#Fetch and store all *.fastq.gz files in the input directory
-FASTQ, = glob_wildcards(input_dir+"genomic_data/pacbio/{sample,[^/]+}.fastq.gz")
-HIC, = glob_wildcards(input_dir+"genomic_data/hic/{sample}_1.fastq.gz")
+#Get input files
+pacbio = config["pacbio"]
+pacbio_path = "/".join(pacbio.split("/")[:-1])+"/"
+pacbio_filename = pacbio.removeprefix(pacbio_path)
+hicF = config["hicF"]
+hicR = config["hicR"]
 HAPS = ["hap1", "hap2"]
 
+#Decide which oatk analysis to run
+def oatk_isPlant():
+    if config["oatk_isPlant"] == True:
+        return("results/organelles/oatk.pltd.ctg.fasta")
+    else:
+        return("results/organelles/oatk.mito.ctg.fasta")
+
 print()
-print(f"Specified Input Directory: {input_dir}")
-print(f"Identified PacBio files: {FASTQ}")
-print(f"Identified HiC files: {HIC}")
+print(f"Input PacBio reads: {pacbio}")
+print(f"Input HiC reads: {hicF}, {hicR}")
 print()
 
 #Define rules that do not need to be submitted to the cluster
-localrules: concatenate_filtered_reads, print_versions
+localrules: print_versions
 
 #Summary rule to run full pipeline (pre-assembly, assembly, scaffolding)
 rule all:
@@ -25,6 +29,7 @@ rule all:
         expand("results/assembly/busco_assembly.hic.{hap}.p_ctg_{lineage}", lineage=config["busco_lineage"], hap=HAPS),
         expand("results/scaffolding/busco_{hap}_scaffolds_final_{lineage}", lineage=config["busco_lineage"], hap=HAPS),
         expand("results/decontamination/{hap}/{hap}_scaffolds_final.decon.fasta", hap=HAPS),
+        oatk_isPlant(),
         "software_versions.txt"
 
 #Summary rule to run all pre-assembly steps
@@ -52,37 +57,45 @@ rule decontamination:
     input:
         expand("results/decontamination/{hap}/{hap}_scaffolds_final.decon.fasta", hap=HAPS),
         "software_versions.txt"
+        
+rule organelles:
+    input:
+        oatk_isPlant()
 
 #Filter PacBio HiFi reads
 rule hifiadapterfilt:
     output:
-        expand(input_dir+"genomic_data/pacbio/filtered/{sample}.filt.fastq.gz", sample=FASTQ)
+        pacbioFilt = "results/pacbio/pacbio.filt.fastq.gz"
     input:
-        expand(input_dir+"genomic_data/pacbio/{sample}.fastq.gz", sample=FASTQ)
+        pacbio
     resources:
         ntasks = config["adapterfilt_threads"]
     params:
         threads = config["adapterfilt_threads"],
         installdir = config["adapterfilt_install_dir"],
-        input_dir = input_dir
     shell:
         r"""
         export PATH={params.installdir}/DB:{params.installdir}:$PATH
-        cd {params.input_dir}/genomic_data/pacbio/
-        mkdir -p temp
-        export TMPDIR=./temp
+        mkdir -p pbfilt_temp
+        cd pbfilt_temp
+        ln -sf {input} ./
+        mkdir -p tmp
+        export TMPDIR=./tmp
         pbadapterfilt.sh \
             -t {params.threads} \
             -o filtered
-        rm -r -f ./temp
+        mv filtered/*filt.fastq.gz ../{output.pacbioFilt}
+        rm -r -f ./tmp
+        cd ..
+        rm -r -f pbfilt_temp
         """
 
 #Count k-mers for genomescope and smudgeplot
 rule count_kmers:
     output:
-        "results/pre_assembly/reads.histo"
+        histo = "results/pre_assembly/reads.histo"
     input:
-        expand(input_dir+"genomic_data/pacbio/{sample}.fastq.gz", sample=FASTQ)
+        pacbio
     resources:
         ntasks = config["KMC_t"]
     params:
@@ -120,7 +133,7 @@ rule genomescope:
     output:
         expand("results/pre_assembly/genomescope/genomescope_ploidy{ploidy}.out", ploidy=config["GS_ploidy_range"])
     input:
-        "results/pre_assembly/reads.histo"
+        rules.count_kmers.output.histo
     params:
         ploidy_range = config["GS_ploidy_range"],
         k = config["KMC_k"]
@@ -142,7 +155,7 @@ rule smudgeplot:
     output:
         expand("results/pre_assembly/smudgeplot/ploidy{ploidy}_smudgeplot.png", ploidy=config["smudge_ploidy"]),
     input:
-        "results/pre_assembly/reads.histo"
+        rules.count_kmers.output.histo
     params:
         ploidy = config["smudge_ploidy"],
         kmc_path = config["KMC_path"],
@@ -169,50 +182,44 @@ rule smudgeplot:
             -k {params.k}
         """
 
-#Concatenate all filtered reads for assembly
-rule concatenate_filtered_reads:
-    output:
-        input_dir+"genomic_data/pacbio/filtered/concat.filt.fastq.gz"
-    input:
-        expand(input_dir+"genomic_data/pacbio/filtered/{sample}.filt.fastq.gz", sample=FASTQ)
-    shell:
-        "cat {input} > {output}"
-
 #Perform genome assembly with hifiasm using pacbio reads and hic reads
 rule assembly_hifiams:
     output:
         hap1 = "results/assembly/assembly.hic.hap1.p_ctg.fa",
         hap2 = "results/assembly/assembly.hic.hap2.p_ctg.fa"
     input:
-        pacbio = input_dir+"genomic_data/pacbio/filtered/concat.filt.fastq.gz",
-        hicF = expand(input_dir+"genomic_data/hic/{hic}_1.fastq.gz", hic=HIC),
-        hicR = expand(input_dir+"genomic_data/hic/{hic}_2.fastq.gz", hic=HIC)
+        pacbio = rules.hifiadapterfilt.output.pacbioFilt,
+        hicF = hicF,
+        hicR = hicR
     resources:
         time = config["hifiasm_cluster_time"],
         mem_per_cpu = config["hifiasm_mem_per_cpu"],
         ntasks = config["hifiasm_threads"]
     params:
-        indir = input_dir+"genomic_data/",
         threads = config["hifiasm_threads"],
-        h1 = expand("hic/{hic}_1.fastq.gz", hic=HIC),
-        h2 = expand("hic/{hic}_2.fastq.gz", hic=HIC)
+        hF = hicF.split("/")[-1],
+        hR = hicR.split("/")[-1]
     shell:
         r"""
         export CWD=$PWD
-        cd {params.indir}
+        mkdir -p assembly_tmp 
+        cd assembly_tmp
+        ln -sf ../{input.pacbio} ./
+        ln -sf {input.hicF} ./
+        ln -sf {input.hicR} ./
         hifiasm \
             -o assembly \
             -t{params.threads} \
-            --h1 {params.h1} \
-            --h2 {params.h2} \
-            pacbio/filtered/concat.filt.fastq.gz
+            --h1 {params.hF} \
+            --h2 {params.hR} \
+            ./pacbio.filt.fastq.gz
         mv assembly.* $CWD/results/assembly
         awk '/^S/{{print ">"$2"\n"$3}}' $CWD/results/assembly/assembly.hic.hap1.p_ctg.gfa \
             | fold > $CWD/{output.hap1}
         awk '/^S/{{print ">"$2"\n"$3}}' $CWD/results/assembly/assembly.hic.hap2.p_ctg.gfa \
             | fold > $CWD/{output.hap2}
+        cd $CWD && rm -r assembly_tmp
         """
-
 
 #Run busco on assembly
 rule busco:
@@ -271,8 +278,8 @@ rule meryl_filter:
         hicFwoH2 = "results/scaffolding/meryl/hicF_hap1.fastq.gz",
         hicRwoH2 = "results/scaffolding/meryl/hicR_hap1.fastq.gz"
     input:
-        hicF = expand(input_dir+"genomic_data/hic/{hic}_1.fastq.gz", hic=HIC),
-        hicR = expand(input_dir+"genomic_data/hic/{hic}_2.fastq.gz", hic=HIC),
+        hicF = hicF,
+        hicR = hicR,
         meryl_hap1 = "results/scaffolding/meryl/assembly.hic.hap1.p_ctg.meryl",
         meryl_hap2 = "results/scaffolding/meryl/assembly.hic.hap2.p_ctg.meryl"
     resources:
@@ -302,7 +309,7 @@ rule meryl_filter:
 #Prepare filtered Hi-C reads for scaffolding
 rule prepare_hic:
     output:
-        "results/scaffolding/{hap}_hic_markdup.sort_n.bam"
+        mapping = "results/scaffolding/{hap}_hic_markdup.sort_n.bam"
     input:
         assembly = "results/assembly/assembly.hic.{hap}.p_ctg.fa",
         hicF = "results/scaffolding/meryl/hicF_{hap}.fastq.gz",
@@ -328,26 +335,33 @@ rule prepare_hic:
             -T results/scaffolding/{wildcards.hap}_tmp_n \
             -O bam \
             results/scaffolding/{wildcards.hap}_mapping.bam \
-        | samtools fixmate -mr - - \
-            > results/scaffolding/{wildcards.hap}_mapping.fixmate.bam
+            > {wildcards.hap}_mapping.sorted.sam
+        samtools fixmate -mr \
+            results/scaffolding/{wildcards.hap}_mapping.sorted.bam \
+            results/scaffolding/{wildcards.hap}_mapping.fixmate.bam
         samtools sort \
             -@{params.t} \
             -T results/scaffolding/{wildcards.hap}_hic_tmp \
             -O bam \
             results/scaffolding/{wildcards.hap}_mapping.fixmate.bam \
-        | samtools markdup -rsS - - \
-            2> results/scaffolding/{wildcards.hap}_hic_markdup.stats \
-            > results/scaffolding/{wildcards.hap}_mapping.markdup.bam
+            results/scaffolding/{wildcards.hap}_mapping.fixmate.sorted.bam
+        samtools markdup -rsS \
+            results/scaffolding/{wildcards.hap}_mapping.fixmate.sorted.bam \
+            results/scaffolding/{wildcards.hap}_mapping.markdup.bam \
+            2> results/scaffolding/{wildcards.hap}_hic_markdup.stats
         samtools sort \
             -@{params.t} \
             -n \
             -T results/scaffolding/{wildcards.hap}_temp_n \
-            -O bam results/scaffolding/{wildcards.hap}_mapping.markdup.bam \
-            > {output}
+            -O bam \
+            results/scaffolding/{wildcards.hap}_mapping.markdup.bam \
+            {output}
         if [ -f {output} ]; then
             rm results/scaffolding/{wildcards.hap}_mapping.bam \
+                results/scaffolding/{wildcards.hap}_mapping.sorted.bam \
                 results/scaffolding/{wildcards.hap}_mapping.fixmate.bam \
-                results/scaffolding/{wildcards.hap}_mapping.markdup.bam
+                results/scaffolding/{wildcards.hap}_mapping.fixmate.sorted.bam \
+                results/scaffolding/{wildcards.hap}_mapping.markdup.bam \
         fi
         """
 
@@ -432,8 +446,63 @@ rule fcs_gx:
             --output {output} \
             --contam-fasta-out results/decontamination/{wildcards.hap}/contam.fasta
         """
+        
+rule run_oatk_plant:
+    output:
+        "results/organelles/oatk.pltd.ctg.fasta"
+    input:
+        pacbio = rules.hifiadapterfilt.output.pacbioFilt
+    resources:
+        tasks = config["oatk_threads"],
+        mem_per_cpu = config["oatk_mem"]
+    params:
+        oatk_install = config["oatk_dir"],
+        oatk_db = config["oatk_db"],
+        lineage = config["oatk_lineage"],
+        k = config["oatk_k"],
+        c = config["oatk_c"],
+        threads = config["oatk_threads"]
+    shell:
+        """
+        {params.oatk_install}/oatk \
+            -k {params.k} \
+            -c {params.c} \
+            -t {params.threads} \
+            --nhmmscan nhmmscan \
+            -m {params.oatk_db}/{params.lineage}_mito.fam \
+            -p {params.oatk_db}/{params.lineage}_pltd.fam \
+            -o results/organelles/oatk \
+            {input.pacbio}
+        """
 
-#Print software versions to file and copy slurm logs to output directory
+rule run_oatk_nonplant:
+    output:
+        "results/organelles/oatk.mito.ctg.fasta"
+    input:
+        pacbio = rules.hifiadapterfilt.output.pacbioFilt
+    resources:
+        ntasks = config["oatk_threads"],
+        mem_per_cpu = config["oatk_mem"]
+    params:
+        oatk_install = config["oatk_dir"],
+        oatk_db = config["oatk_db"],
+        lineage = config["oatk_lineage"],
+        k = config["oatk_k"],
+        c = config["oatk_c"],
+        threads = config["oatk_threads"],
+    shell:
+        """
+        {params.oatk_install}/oatk \
+            -k {params.k} \
+            -c {params.c} \
+            -t {params.threads} \
+            --nhmmscan nhmmscan \
+            -m {params.oatk_db}/{params.lineage}_mito.fam \
+            -o results/organelles/oatk \
+            {input.pacbio}
+        """     
+        
+#Print software versions to file
 rule print_versions:
     output:
         "software_versions.txt"

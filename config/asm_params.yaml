@@ -1,6 +1,9 @@
-### Working directory ###
-#Define the absolute path to the species directory containing the input files (see Readme)
-input_dir: "/path/to/input/data"
+### Input data ###
+#Define the absolute path to the PACBIO reads
+pacbio: "/cluster/projects/nn8013k/results/species/Spinus_spinus/bSpiSpi1/genomic_data/pacbio/bSpiSpi1.hifi.fastq.gz"
+#Define the absolute path to the HIC reads, both forward and reverse (hicF and hicR)
+hicF: "/cluster/projects/nn8013k/results/species/Spinus_spinus/bSpiSpi1/genomic_data/hic/1-25-146-Spinus-spinus_S98_L004_R1_001.fastq.gz"
+hicR: "/cluster/projects/nn8013k/results/species/Spinus_spinus/bSpiSpi1/genomic_data/hic/1-25-146-Spinus-spinus_S98_L004_R2_001.fastq.gz"
 
 ### Adapterfilt parameters ###
 adapterfilt_install_dir: "/cluster/projects/nn8013k/opt/HiFiAdapterFilt"
@@ -41,6 +44,16 @@ meryl_memory: "38g"
 ### Yahs parameters ###
 yahs_cluster_time: "72:00:00"
 yahs_threads: "16"
+
+### Oatk parameters ###
+oatk_dir: "/cluster/projects/nn8013k/opt/oatk"
+oatk_db: "/cluster/projects/nn8013k/opt/OatkDB/v20230921"
+oatk_lineage: "aves"
+oatk_isPlant: False
+oatk_k: "1001" #syncmer size
+oatk_c: "150" #syncmer coverage threshold (+- 5-10 times nuclear coverage)
+oatk_threads: "8"
+oatk_mem: "10G"
 
 ### FCS parameters ###
 fcs_path: "/cluster/projects/nn8013k/opt/fcs/dist"
