@@ -14,5 +14,4 @@ dependencies:
   - bamtools
   - snakemake
   - merqury
-  - samtools
   - meryl
