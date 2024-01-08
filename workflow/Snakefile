@@ -335,7 +335,7 @@ rule prepare_hic:
             -T results/scaffolding/{wildcards.hap}_tmp_n \
             -O bam \
             results/scaffolding/{wildcards.hap}_mapping.bam \
-            > results/scaffolding/{wildcards.hap}_mapping.sorted.sam
+            > results/scaffolding/{wildcards.hap}_mapping.sorted.bam
         samtools fixmate -mr \
             results/scaffolding/{wildcards.hap}_mapping.sorted.bam \
             results/scaffolding/{wildcards.hap}_mapping.fixmate.bam
