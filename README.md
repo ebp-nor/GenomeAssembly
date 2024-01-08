@@ -102,12 +102,13 @@ The pipeline has different runing modes, and the run mode should always be the l
 - "scaffolding": will run all steps necessary for scaffolding (filtering, assembly, HiC filtering, scaffolding, busco), but without pre-assembly
 - "decontamination": will run assembly, scaffolding, and decontamination, but without pre-assembly and busco analyses
 - "organelles": will run only organnelle genome assembly
+
 ## Output
 
 All generated output will be present in the "results" directory, which will be created in the folder from where you invoke the snakemake command.
 This results directory contains different subdirectories related to the different steps in the assembly:
 - results/pre_assembly: genomescope and smudgeplot output (each in its own subfolder)
-- resulst/assembly: Hifiasm assembly output and corresponding busco results
+- results/assembly: Hifiasm assembly output and corresponding busco results
 - results/scaffolding: scaffolding output, separated in two folders:
   - meryl: meryl databases used for filtering HiC reads
   - yahs: scaffolding output, including final scaffolds and their corresponding busco results
