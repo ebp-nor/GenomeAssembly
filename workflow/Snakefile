@@ -307,19 +307,19 @@ rule meryl_filter:
         """
 
 #Prepare filtered Hi-C reads for scaffolding
-rule prepare_hic:
+rule map_hic:
     output:
-        mapping = "results/scaffolding/{hap}_hic_markdup.sort_n.bam"
-    input:
+        mapping = "results/scaffolding/{hap}_mapping.bam"
+    input: 
         assembly = "results/assembly/assembly.hic.{hap}.p_ctg.fa",
         hicF = "results/scaffolding/meryl/hicF_{hap}.fastq.gz",
         hicR = "results/scaffolding/meryl/hicR_{hap}.fastq.gz"
     resources:
-        ntasks = config["yahs_threads"],
+        ntasks = config["yahs_threads"]
     params:
-        t = config["yahs_threads"],
+        t = config["yahs_threads"]
     shell:
-        r"""
+        """
         bwa index {input.assembly}
         samtools faidx {input.assembly}
         bwa mem \
@@ -329,13 +329,26 @@ rule prepare_hic:
             {input.assembly} {input.hicF} {input.hicR} \
         | samtools view -buS - \
             > results/scaffolding/{wildcards.hap}_mapping.bam
+        """
+
+rule prepare_hic:
+    output:
+        markdup = "results/scaffolding/{hap}_hic_markdup.sort_n.bam"
+    input:
+        mapping = rules.map_hic.output.mapping
+    resources:
+        ntasks = config["yahs_threads"],
+    params:
+        t = config["yahs_threads"],
+    shell:
+        r"""
         samtools sort \
             -@{params.t} \
             -n \
             -T results/scaffolding/{wildcards.hap}_tmp_n \
             -O bam \
-            results/scaffolding/{wildcards.hap}_mapping.bam \
-            > results/scaffolding/{wildcards.hap}_mapping.sorted.bam
+            -o results/scaffolding/{wildcards.hap}_mapping.sorted.bam \
+            {input.mapping}
         samtools fixmate -mr \
             results/scaffolding/{wildcards.hap}_mapping.sorted.bam \
             results/scaffolding/{wildcards.hap}_mapping.fixmate.bam
@@ -343,9 +356,10 @@ rule prepare_hic:
             -@{params.t} \
             -T results/scaffolding/{wildcards.hap}_hic_tmp \
             -O bam \
-            results/scaffolding/{wildcards.hap}_mapping.fixmate.bam \
-            results/scaffolding/{wildcards.hap}_mapping.fixmate.sorted.bam
-        samtools markdup -rsS \
+            -o results/scaffolding/{wildcards.hap}_mapping.fixmate.sorted.bam \
+            results/scaffolding/{wildcards.hap}_mapping.fixmate.bam
+        samtools markdup -rs \
+            -@{params.t}\
             results/scaffolding/{wildcards.hap}_mapping.fixmate.sorted.bam \
             results/scaffolding/{wildcards.hap}_mapping.markdup.bam \
             2> results/scaffolding/{wildcards.hap}_hic_markdup.stats
@@ -354,14 +368,14 @@ rule prepare_hic:
             -n \
             -T results/scaffolding/{wildcards.hap}_temp_n \
             -O bam \
-            results/scaffolding/{wildcards.hap}_mapping.markdup.bam \
-            {output}
-        if [ -f {output} ]; then
-            rm results/scaffolding/{wildcards.hap}_mapping.bam \
+            -o {output.markdup} \
+            results/scaffolding/{wildcards.hap}_mapping.markdup.bam
+        if [ -f {output.markdup} ]; then
+            rm results/scaffolding/{wildcards.hap}_mapping.bam
                 results/scaffolding/{wildcards.hap}_mapping.sorted.bam \
                 results/scaffolding/{wildcards.hap}_mapping.fixmate.bam \
                 results/scaffolding/{wildcards.hap}_mapping.fixmate.sorted.bam \
-                results/scaffolding/{wildcards.hap}_mapping.markdup.bam \
+                results/scaffolding/{wildcards.hap}_mapping.markdup.bam
         fi
         """
 
@@ -525,4 +539,3 @@ rule print_versions:
         printf "fcs.py:\t" >> {output}
         cat {params.fcs_path}/fcs.py | grep "^DEFAULT_VERSION" >> {output}
         """
-
