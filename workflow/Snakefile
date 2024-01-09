@@ -324,7 +324,7 @@ rule map_hic:
         samtools faidx {input.assembly}
         bwa mem \
             -t {params.t} \
-            -R '@RG\tSM:{wildcards.hap}\tID:{wildcards.hap}' \
+            -R '@RG\\tSM:{wildcards.hap}\\tID:{wildcards.hap}' \
             -5SPM \
             {input.assembly} {input.hicF} {input.hicR} \
         | samtools view -buS - \
