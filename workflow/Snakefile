@@ -371,7 +371,7 @@ rule prepare_hic:
             -o {output.markdup} \
             results/scaffolding/{wildcards.hap}_mapping.markdup.bam
         if [ -f {output.markdup} ]; then
-            rm results/scaffolding/{wildcards.hap}_mapping.bam
+            rm results/scaffolding/{wildcards.hap}_mapping.bam \
                 results/scaffolding/{wildcards.hap}_mapping.sorted.bam \
                 results/scaffolding/{wildcards.hap}_mapping.fixmate.bam \
                 results/scaffolding/{wildcards.hap}_mapping.fixmate.sorted.bam \
