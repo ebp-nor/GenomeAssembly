@@ -5,6 +5,12 @@ pacbio_filename = pacbio.removeprefix(pacbio_path)
 hicF = config["hicF"]
 hicR = config["hicR"]
 HAPS = ["hap1", "hap2"]
+#Check if ONT reads are defined
+ont = config["ont"]
+if ont:
+    hifiasm_ont = f" --ul {ont}"
+else:
+    hifiasm_ont = ""
 
 #Decide which oatk analysis to run
 def oatk_isPlant():
@@ -16,6 +22,8 @@ def oatk_isPlant():
 print()
 print(f"Input PacBio reads: {pacbio}")
 print(f"Input HiC reads: {hicF}, {hicR}")
+if ont:
+    print(f"Input ONT reads: {ont}")
 print()
 
 #Define rules that do not need to be submitted to the cluster
@@ -72,7 +80,7 @@ rule hifiadapterfilt:
         ntasks = config["adapterfilt_threads"]
     params:
         threads = config["adapterfilt_threads"],
-        installdir = config["adapterfilt_install_dir"],
+        installdir = config["adapterfilt_install_dir"]
     shell:
         r"""
         export PATH={params.installdir}/DB:{params.installdir}:$PATH
@@ -190,7 +198,8 @@ rule assembly_hifiams:
     input:
         pacbio = rules.hifiadapterfilt.output.pacbioFilt,
         hicF = hicF,
-        hicR = hicR
+        hicR = hicR,
+        ont = ont
     resources:
         time = config["hifiasm_cluster_time"],
         mem_per_cpu = config["hifiasm_mem_per_cpu"],
@@ -198,7 +207,8 @@ rule assembly_hifiams:
     params:
         threads = config["hifiasm_threads"],
         hF = hicF.split("/")[-1],
-        hR = hicR.split("/")[-1]
+        hR = hicR.split("/")[-1],
+        ont = hifiasm_ont
     shell:
         r"""
         export CWD=$PWD
@@ -210,6 +220,7 @@ rule assembly_hifiams:
         hifiasm \
             -o assembly \
             -t{params.threads} \
+            {params.ont} \
             --h1 {params.hF} \
             --h2 {params.hR} \
             ./pacbio.filt.fastq.gz
@@ -307,35 +318,48 @@ rule meryl_filter:
         """
 
 #Prepare filtered Hi-C reads for scaffolding
-rule prepare_hic:
+rule map_hic:
     output:
-        mapping = "results/scaffolding/{hap}_hic_markdup.sort_n.bam"
-    input:
+        mapping = temp("results/scaffolding/{hap}_mapping.bam")
+    input: 
         assembly = "results/assembly/assembly.hic.{hap}.p_ctg.fa",
         hicF = "results/scaffolding/meryl/hicF_{hap}.fastq.gz",
         hicR = "results/scaffolding/meryl/hicR_{hap}.fastq.gz"
     resources:
-        ntasks = config["yahs_threads"],
+        ntasks = config["yahs_threads"]
     params:
-        t = config["yahs_threads"],
+        t = config["yahs_threads"]
     shell:
         r"""
         bwa index {input.assembly}
         samtools faidx {input.assembly}
         bwa mem \
             -t {params.t} \
-            -R '@RG\tSM:{wildcards.hap}\tID:{wildcards.hap}' \
+            -R '@RG\\tSM:{wildcards.hap}\\tID:{wildcards.hap}' \
             -5SPM \
             {input.assembly} {input.hicF} {input.hicR} \
         | samtools view -buS - \
             > results/scaffolding/{wildcards.hap}_mapping.bam
+        """
+
+rule prepare_hic:
+    output:
+        markdup = "results/scaffolding/{hap}_hic_markdup.sort_n.bam"
+    input:
+        mapping = rules.map_hic.output.mapping
+    resources:
+        ntasks = config["yahs_threads"]
+    params:
+        t = config["yahs_threads"]
+    shell:
+        r"""
         samtools sort \
             -@{params.t} \
             -n \
             -T results/scaffolding/{wildcards.hap}_tmp_n \
             -O bam \
-            results/scaffolding/{wildcards.hap}_mapping.bam \
-            > results/scaffolding/{wildcards.hap}_mapping.sorted.sam
+            -o results/scaffolding/{wildcards.hap}_mapping.sorted.bam \
+            {input.mapping}
         samtools fixmate -mr \
             results/scaffolding/{wildcards.hap}_mapping.sorted.bam \
             results/scaffolding/{wildcards.hap}_mapping.fixmate.bam
@@ -343,9 +367,10 @@ rule prepare_hic:
             -@{params.t} \
             -T results/scaffolding/{wildcards.hap}_hic_tmp \
             -O bam \
-            results/scaffolding/{wildcards.hap}_mapping.fixmate.bam \
-            results/scaffolding/{wildcards.hap}_mapping.fixmate.sorted.bam
-        samtools markdup -rsS \
+            -o results/scaffolding/{wildcards.hap}_mapping.fixmate.sorted.bam \
+            results/scaffolding/{wildcards.hap}_mapping.fixmate.bam
+        samtools markdup -rs \
+            -@{params.t}\
             results/scaffolding/{wildcards.hap}_mapping.fixmate.sorted.bam \
             results/scaffolding/{wildcards.hap}_mapping.markdup.bam \
             2> results/scaffolding/{wildcards.hap}_hic_markdup.stats
@@ -354,14 +379,13 @@ rule prepare_hic:
             -n \
             -T results/scaffolding/{wildcards.hap}_temp_n \
             -O bam \
-            results/scaffolding/{wildcards.hap}_mapping.markdup.bam \
-            {output}
-        if [ -f {output} ]; then
-            rm results/scaffolding/{wildcards.hap}_mapping.bam \
-                results/scaffolding/{wildcards.hap}_mapping.sorted.bam \
+            -o {output.markdup} \
+            results/scaffolding/{wildcards.hap}_mapping.markdup.bam
+        if [ -f {output.markdup} ]; then
+                rm results/scaffolding/{wildcards.hap}_mapping.sorted.bam \
                 results/scaffolding/{wildcards.hap}_mapping.fixmate.bam \
                 results/scaffolding/{wildcards.hap}_mapping.fixmate.sorted.bam \
-                results/scaffolding/{wildcards.hap}_mapping.markdup.bam \
+                results/scaffolding/{wildcards.hap}_mapping.markdup.bam
         fi
         """
 
