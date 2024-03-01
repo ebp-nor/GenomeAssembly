@@ -5,6 +5,13 @@ pacbio_filename = pacbio.removeprefix(pacbio_path)
 hicF = config["hicF"]
 hicR = config["hicR"]
 HAPS = ["hap1", "hap2"]
+#Check if ONT reads are defined
+ont = config["ont"]
+if ont:
+    hifiasm_ont = f" --ul {ont}"
+else:
+    hifiasm_ont = ""
+    ont = []
 
 #Decide which oatk analysis to run
 def oatk_isPlant():
@@ -16,6 +23,8 @@ def oatk_isPlant():
 print()
 print(f"Input PacBio reads: {pacbio}")
 print(f"Input HiC reads: {hicF}, {hicR}")
+if ont:
+    print(f"Input ONT reads: {ont}")
 print()
 
 #Define rules that do not need to be submitted to the cluster
@@ -72,7 +81,7 @@ rule hifiadapterfilt:
         ntasks = config["adapterfilt_threads"]
     params:
         threads = config["adapterfilt_threads"],
-        installdir = config["adapterfilt_install_dir"],
+        installdir = config["adapterfilt_install_dir"]
     shell:
         r"""
         export PATH={params.installdir}/DB:{params.installdir}:$PATH
@@ -125,7 +134,10 @@ rule count_kmers:
             histogram \
             results/pre_assembly/reads.histo \
             -cx{params.cx}
-        rm -r -f results/pre_assembly/tmp FILES
+        if [ -f {output.histo} ]; then
+            rm -r -f results/pre_assembly/tmp FILES
+            rm results/pre_assembly/reads.kmc*
+        fi
         """
 
 #Run Genomescope
@@ -190,7 +202,8 @@ rule assembly_hifiams:
     input:
         pacbio = rules.hifiadapterfilt.output.pacbioFilt,
         hicF = hicF,
-        hicR = hicR
+        hicR = hicR,
+        ont = ont
     resources:
         time = config["hifiasm_cluster_time"],
         mem_per_cpu = config["hifiasm_mem_per_cpu"],
@@ -198,7 +211,8 @@ rule assembly_hifiams:
     params:
         threads = config["hifiasm_threads"],
         hF = hicF.split("/")[-1],
-        hR = hicR.split("/")[-1]
+        hR = hicR.split("/")[-1],
+        ont = hifiasm_ont
     shell:
         r"""
         export CWD=$PWD
@@ -210,6 +224,7 @@ rule assembly_hifiams:
         hifiasm \
             -o assembly \
             -t{params.threads} \
+            {params.ont} \
             --h1 {params.hF} \
             --h2 {params.hR} \
             ./pacbio.filt.fastq.gz
@@ -219,6 +234,9 @@ rule assembly_hifiams:
         awk '/^S/{{print ">"$2"\n"$3}}' $CWD/results/assembly/assembly.hic.hap2.p_ctg.gfa \
             | fold > $CWD/{output.hap2}
         cd $CWD && rm -r assembly_tmp
+        if [ -f {output.hap1} ]; then
+            rm results/assembly/*bin
+        fi
         """
 
 #Run busco on assembly
@@ -250,7 +268,7 @@ rule busco:
 #Create Meryl Database
 rule create_meryl_db:
     output:
-        directory("results/scaffolding/meryl/assembly.hic.{hap}.p_ctg.meryl")
+        temp(directory("results/scaffolding/meryl/assembly.hic.{hap}.p_ctg.meryl"))
     input:
         "results/assembly/assembly.hic.{hap}.p_ctg.fa"
     resources:
@@ -304,12 +322,15 @@ rule meryl_filter:
             -sequence {input.hicF} {input.hicR} \
             -mers results/scaffolding/meryl/only_hap2.meryl \
             -output {output.hicFwoH2} {output.hicRwoH2}
+        if [ -f {output.hicFwoH1} ]; then
+            rm -r results/scaffolding/meryl/only*
+        fi
         """
 
 #Prepare filtered Hi-C reads for scaffolding
 rule map_hic:
     output:
-        mapping = "results/scaffolding/{hap}_mapping.bam"
+        mapping = temp("results/scaffolding/{hap}_mapping.bam")
     input: 
         assembly = "results/assembly/assembly.hic.{hap}.p_ctg.fa",
         hicF = "results/scaffolding/meryl/hicF_{hap}.fastq.gz",
@@ -319,27 +340,30 @@ rule map_hic:
     params:
         t = config["yahs_threads"]
     shell:
-        """
-        bwa index {input.assembly}
-        samtools faidx {input.assembly}
+        r"""
+        if [ ! -f {input.assembly}.bwt ]; then
+            bwa index {input.assembly}
+        fi
+        if [ ! -f {input.assembly}.fai ]; then
+            samtools faidx {input.assembly}
+        fi
         bwa mem \
             -t {params.t} \
-            -R '@RG\\tSM:{wildcards.hap}\\tID:{wildcards.hap}' \
+            -R '@RG\tSM:{wildcards.hap}\tID:{wildcards.hap}' \
             -5SPM \
             {input.assembly} {input.hicF} {input.hicR} \
-        | samtools view -buS - \
-            > results/scaffolding/{wildcards.hap}_mapping.bam
+        | samtools view -bu - > results/scaffolding/{wildcards.hap}_mapping.bam
         """
 
 rule prepare_hic:
     output:
-        markdup = "results/scaffolding/{hap}_hic_markdup.sort_n.bam"
+        markdup = temp("results/scaffolding/{hap}_hic_markdup.sort_n.bam")
     input:
         mapping = rules.map_hic.output.mapping
     resources:
-        ntasks = config["yahs_threads"],
+        ntasks = config["yahs_threads"]
     params:
-        t = config["yahs_threads"],
+        t = config["yahs_threads"]
     shell:
         r"""
         samtools sort \
@@ -371,8 +395,7 @@ rule prepare_hic:
             -o {output.markdup} \
             results/scaffolding/{wildcards.hap}_mapping.markdup.bam
         if [ -f {output.markdup} ]; then
-            rm results/scaffolding/{wildcards.hap}_mapping.bam \
-                results/scaffolding/{wildcards.hap}_mapping.sorted.bam \
+                rm results/scaffolding/{wildcards.hap}_mapping.sorted.bam \
                 results/scaffolding/{wildcards.hap}_mapping.fixmate.bam \
                 results/scaffolding/{wildcards.hap}_mapping.fixmate.sorted.bam \
                 results/scaffolding/{wildcards.hap}_mapping.markdup.bam
@@ -397,6 +420,9 @@ rule scaffold_hap:
             2> results/scaffolding/yahs_{wildcards.hap}.err
         gfastats {output} \
             > results/scaffolding/{wildcards.hap}_scaffolds_final.stats
+        if [ -f {output} ]; then
+            rm results/scaffolding/{wildcards.hap}.bin
+        fi
         """
  
 #Remove adaptors and vector contamination
@@ -539,3 +565,4 @@ rule print_versions:
         printf "fcs.py:\t" >> {output}
         cat {params.fcs_path}/fcs.py | grep "^DEFAULT_VERSION" >> {output}
         """
+

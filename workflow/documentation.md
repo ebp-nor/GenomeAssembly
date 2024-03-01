@@ -55,10 +55,10 @@ The absolute path of this directory needs to be specified in the config/asm_para
 
 The necessary config files for running the pipeline can be found in the config folder.
 
-General snakemake and cluster submission parameters are defined in ```config/config.yaml```, 
-software-specific parameters are defined in ```config/asm_params.yaml```.
+General snakemake and cluster submission parameters are defined in config/config.yaml, 
+software-specific parameters are defined in config/asm_params.yaml.
 
-For software not installed by conda, the installation path needs to be provided to the Snakemake pipeline by editing following parameters in the ```config/asm_params.yaml```:
+For software not installed by conda, the installation path needs to be provided to the Snakemake pipeline by editing following parameters in the config/asm_params.yaml:
 
 - Set the "adapterfilt_install_dir" parameter to the installation path of HiFiAdapterFilt
 - Set the "KMC_path" parameter to the installation path of KMC
@@ -68,7 +68,7 @@ For software not installed by conda, the installation path needs to be provided 
 
 A couple of other parameters need to be verified as well in the config/asm_params.yaml file before running the pipeline:
 
-- The location of the input data (```input_dir```) should be set to the folder containing the input data.
+- The location of the input data (```species_dir```) should be set to the folder containing the input data.
 - The location of the downloaded busco lineages (```busco_db_dir```) should be set to the folder containing the busco lineages files downloaded earlier
 - The required BUSCO lineage for running the BUSCO analysis needs to set (```busco_lineage``` parameter). Run ```busco --list-datasets``` to get an overview of all available datasets.
 - The NCBI taxid of your species, required for the decontamination step (```taxid``` parameter)
@@ -76,19 +76,18 @@ A couple of other parameters need to be verified as well in the config/asm_param
 ## Usage and run modes
 
 Before running, make sure to activate the conda environment containing the necessary software: ```conda activate asm_assembly```.
-To run the pipeline, run the following command:
+To run the pipeline, run the following command from the directory containg the ```workflow``` and ```config``` folders:
 
 ```
-snakemake --profile config/ --configfile config/asm_params.yaml --snakefile workflow/Snakefile {run_mode}
+snakemake {run_mode}
 ```
 
-If you invoke the snakemake command in another directory than the one containing the ```workflow``` and ```config``` folders, 
-or if the config files (```config.yaml``` and ```asm_params.yaml```) are in another location, you need to specify their correct paths on the command line.
-
-The workflow parameters can be modified in 3 ways:
+If the config files (```config.yaml``` and ```asm_params.yaml```) are not in the standard ```config``` directory, you can specify the location of
+these config files using the ```--profile``` option. 
+The parameters can be modified in 3 ways:
 - Directly modifying the ```config/asm_parameters.yaml``` file
 - Overriding the default parameters on the command line: ```--config parameter=new_value```
-- Overriding the default parameters using a different yaml file: ```--configfile path_to_parameters.yaml```
+- Overriding the default parameters using a different yaml file: ```--configfile path_to_paramters.yaml```
 
 The pipeline has different runing modes, and the run mode should always be the last argument on the command line:
 
@@ -100,7 +99,7 @@ The pipeline has different runing modes, and the run mode should always be the l
 
 ## Output
 
-All generated output will be present in the "results" directory, which will be created in the folder from where you invoke the snakemake command.
+All generated output will be present in the "results" directory, which will be created in the specified input directory speficified in the config file.
 This results directory contains different subdirectories related to the different steps in the assembly:
 - results/pre_assembly: genomescope and smudgeplot output (each in its own subfolder)
 - resulst/assembly: Hifiasm assembly output and corresponding busco results
@@ -108,6 +107,5 @@ This results directory contains different subdirectories related to the differen
   - meryl: meryl databases used for filtering HiC reads
   - yahs: scaffolding output, including final scaffolds and their corresponding busco results
 - results/decontamination: decontamination output of the final scaffolded assembly
-
 Additionally, a text file containing all software versions will be created in the specified input directory.
 The log files of the different steps in the workflow can be found in the ```logs``` directory located in the input directory.
