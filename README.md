@@ -44,7 +44,8 @@ You will need to specify the folder where you downloaded the busco lineages in t
 
 ### Data
 
-This pipeline is created for using PacBio HiFi reads together with paired-end Hi-C data.
+This pipeline is created for using PacBio HiFi reads together with paired-end HiC data.
+If Oxford Nanopore ultra-long reads are available, they can be used to aid the assembly.
 You will need to specify the absolute paths to these files in the config file (see Parameters section).
 
 ### Parameters
@@ -57,6 +58,7 @@ data- and software-specfic parameters are defined in ```config/asm_params.yaml``
 First, define the paths of the input files you want to use:
 - pacbio: path to the location of the PacBio HiFi reads (```.fastq.gz```)
 - hicF and hicR: path to the forward and reverse HiC reads respectively
+- ont: path to the location of ONT reads (```.fastq.gz```) (optional)
 
 For software not installed by conda, the installation path needs to be provided to the Snakemake pipeline by editing following parameters in the ```config/asm_params.yaml```:
 
@@ -74,7 +76,7 @@ A couple of other parameters need to be verified as well in the config/asm_param
 - The location of the downloaded busco lineages (```busco_db_dir```) should be set to the folder containing the busco lineages files downloaded earlier
 - The required BUSCO lineage for running the BUSCO analysis needs to set (```busco_lineage``` parameter). Run ```busco --list-datasets``` to get an overview of all available datasets.
 - The required oatk lineage for running organelle genome assembly (```oatk_lineage``` parameter). Check https://github.com/c-zhou/OatkDB for an overview of available lineages.
-- A boolean value wether the species is plant (for plastid prediction) or not (```oatk_isPlant```; set to either True or False)
+- A boolean value wether the species is plant (for plastid prediction) or not (```oatk_isPlant```; set to either True or False, without quotation marks)
 - The NCBI taxid of your species, required for the decontamination step (```taxid``` parameter)
 
 ## Usage and run modes
