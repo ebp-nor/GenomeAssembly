@@ -16,3 +16,7 @@ dependencies:
   - merqury
   - samtools
   - meryl
+  - minimap2
+  - pretext-suite
+  - deeptools
+  - ucsc-bigWigToBedGraph

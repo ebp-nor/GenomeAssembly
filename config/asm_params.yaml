@@ -69,3 +69,9 @@ fcs_gx_partition: "bigmem"
 fcs_gx_image: "/cluster/projects/nn8013k/opt/fcs/fcs-gx.sif"
 fcs_gx_db: "/cluster/projects/nn8013k/opt/fcs/gxdb"
 taxid: "76058"
+
+### Curation parameters ###
+curation_mapping_mem: "5G"
+curation_mapping_threads: "16"
+curation_install_dir: "/cluster/projects/nn8013k/opt/rapid-curation/rapid_hic_software/"
+curation_telomere_rep: "TTAGGG"
