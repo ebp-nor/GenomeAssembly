@@ -6,7 +6,8 @@ and is primarly designed for diploid eukaryotic organisms. The pipeline is desig
 
 ## Requirements & Setup
 
-Some software need to be configured/installed before the pipeline can be run
+Some software need to be configured/installed before the pipeline can be run.
+This workflow is set up to work on a computing cluster with SLURM.
 
 ### Conda setup
 
@@ -29,6 +30,10 @@ The following software need to be installed manually:
 - NCBI FCS-Adaptor (https://github.com/ncbi/fcs/wiki/FCS-adaptor)
 - NCBI FCS-GX (https://github.com/ncbi/fcs/wiki/FCS-GX)
 
+Optional for the first step of assembly curation:
+- Functional singularity installation
+- Rapid Curation Singularity images (```.sif```) (https://gitlab.com/wtsi-grit/rapid-curation/-/tree/65fa15125dbcce025d02471f30fc093170f48bf7) (Versions after 2024-03-04 do not have the required singularity images)
+
 Please refer to their respective installation instructions to properly install them. You will need to privide the installation paths of these software to the config file (see Parameter section).
 
 ### BUSCO database setup
@@ -44,7 +49,8 @@ You will need to specify the folder where you downloaded the busco lineages in t
 
 ### Data
 
-This pipeline is created for using PacBio HiFi reads together with paired-end Hi-C data.
+This pipeline is created for using PacBio HiFi reads together with paired-end HiC data.
+If Oxford Nanopore ultra-long reads are available, they can be used to aid the assembly.
 You will need to specify the absolute paths to these files in the config file (see Parameters section).
 
 ### Parameters
@@ -57,6 +63,7 @@ data- and software-specfic parameters are defined in ```config/asm_params.yaml``
 First, define the paths of the input files you want to use:
 - pacbio: path to the location of the PacBio HiFi reads (```.fastq.gz```)
 - hicF and hicR: path to the forward and reverse HiC reads respectively
+- ont: path to the location of ONT reads (```.fastq.gz```) (optional)
 
 For software not installed by conda, the installation path needs to be provided to the Snakemake pipeline by editing following parameters in the ```config/asm_params.yaml```:
 
@@ -67,6 +74,7 @@ For software not installed by conda, the installation path needs to be provided 
 - Set the "fcs_path" parameter to the location of the ```run_fcsadaptor.sh``` and ```fcs.py``` scripts
 - Set the "fcs_adaptor_image" and "fcs_gx_image" parameters to the paths to the ```fcs-adaptor.sif``` and ```fcs-gx.sif``` files respectively
 - Set the "fcs_gx_db" parameter to the path of the fcs-gx database
+- Set the "curation_install_dir" parameter to the path containing the rapid-curation singularity images (```.sif```) if performing curation
 
 A couple of other parameters need to be verified as well in the config/asm_params.yaml file before running the pipeline:
 
@@ -74,8 +82,9 @@ A couple of other parameters need to be verified as well in the config/asm_param
 - The location of the downloaded busco lineages (```busco_db_dir```) should be set to the folder containing the busco lineages files downloaded earlier
 - The required BUSCO lineage for running the BUSCO analysis needs to set (```busco_lineage``` parameter). Run ```busco --list-datasets``` to get an overview of all available datasets.
 - The required oatk lineage for running organelle genome assembly (```oatk_lineage``` parameter). Check https://github.com/c-zhou/OatkDB for an overview of available lineages.
-- A boolean value wether the species is plant (for plastid prediction) or not (```oatk_isPlant```; set to either True or False)
+- A boolean value wether the species is plant (for plastid prediction) or not (```oatk_isPlant```; set to either True or False, without quotation marks)
 - The NCBI taxid of your species, required for the decontamination step (```taxid``` parameter)
+- The telomere repeat sequence (```curation_telomere_rep```) if performing curation
 
 ## Usage and run modes
 
@@ -96,11 +105,13 @@ The workflow parameters can be modified in 3 ways:
 
 The pipeline has different runing modes, and the run mode should always be the last argument on the command line:
 
-- "all" (default): will run the full workflow including pre-assembly (genomescope & smudgeplot), assembly, scaffolding, decontamination, and organelle assembly
+- "all" (default): will run the full workflow including pre-assembly (genomescope & smudgeplot), assembly, scaffolding, decontamination, and pre-curation and organelle assembly
+- "all_nocuration": will run the full workflow, but without the final curation step
 - "pre_assembly": will run only the pre-assembly steps (genomescope & smudgeplot)
 - "assembly": will filter the HiFi reads and assemble them using hifiasm (also using the Hi-C reads), and run busco
 - "scaffolding": will run all steps necessary for scaffolding (filtering, assembly, HiC filtering, scaffolding, busco), but without pre-assembly
 - "decontamination": will run assembly, scaffolding, and decontamination, but without pre-assembly and busco analyses
+- "curation": will runn everything up to curation, but without pre-assembly and busco analyses
 - "organelles": will run only organnelle genome assembly
 
 ## Output
@@ -114,6 +125,7 @@ This results directory contains different subdirectories related to the differen
   - yahs: scaffolding output, including final scaffolds and their corresponding busco results
 - results/decontamination: decontamination output of the final scaffolded assembly
 - results/organelles: assembled organellar genomes
+- results/curation: files necessary for further manual curation of the assembly
 
 Additionally, a text file containing all software versions will be created in the specified input directory.
 The log files of the different steps in the workflow can be found in the ```logs``` directory that will be created.

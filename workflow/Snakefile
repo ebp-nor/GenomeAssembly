@@ -5,6 +5,13 @@ pacbio_filename = pacbio.removeprefix(pacbio_path)
 hicF = config["hicF"]
 hicR = config["hicR"]
 HAPS = ["hap1", "hap2"]
+#Check if ONT reads are defined
+ont = config["ont"]
+if ont:
+    hifiasm_ont = f" --ul {ont}"
+else:
+    hifiasm_ont = ""
+    ont = []
 
 #Decide which oatk analysis to run
 def oatk_isPlant():
@@ -16,10 +23,12 @@ def oatk_isPlant():
 print()
 print(f"Input PacBio reads: {pacbio}")
 print(f"Input HiC reads: {hicF}, {hicR}")
+if ont:
+    print(f"Input ONT reads: {ont}")
 print()
 
 #Define rules that do not need to be submitted to the cluster
-localrules: print_versions
+localrules: concat_scaff, update_pretext, print_versions
 
 #Summary rule to run full pipeline (pre-assembly, assembly, scaffolding)
 rule all:
@@ -30,8 +39,20 @@ rule all:
         expand("results/scaffolding/busco_{hap}_scaffolds_final_{lineage}", lineage=config["busco_lineage"], hap=HAPS),
         expand("results/decontamination/{hap}/{hap}_scaffolds_final.decon.fasta", hap=HAPS),
         oatk_isPlant(),
+        "results/curation/Scaff_HiC.final.pretext",
         "software_versions.txt"
 
+#Summary rule to run the full pipeline, but without curation
+rule all_nocuration:
+    input:
+        expand("results/pre_assembly/genomescope/genomescope_ploidy{ploidy}.out", ploidy=config["GS_ploidy_range"]),
+        expand("results/pre_assembly/smudgeplot/ploidy{ploidy}_smudgeplot.png", ploidy=config["smudge_ploidy"]),
+        expand("results/assembly/busco_assembly.hic.{hap}.p_ctg_{lineage}", lineage=config["busco_lineage"], hap=HAPS),
+        expand("results/scaffolding/busco_{hap}_scaffolds_final_{lineage}", lineage=config["busco_lineage"], hap=HAPS),
+        expand("results/decontamination/{hap}/{hap}_scaffolds_final.decon.fasta", hap=HAPS),
+        oatk_isPlant(),
+        "software_versions.txt"
+        
 #Summary rule to run all pre-assembly steps
 rule pre_assembly:
     input:
@@ -58,9 +79,15 @@ rule decontamination:
         expand("results/decontamination/{hap}/{hap}_scaffolds_final.decon.fasta", hap=HAPS),
         "software_versions.txt"
         
+#Rule for creating organelle assembly only        
 rule organelles:
     input:
         oatk_isPlant()
+
+#General rule for generationg a decontaminated assembly and files for curation, but without running busco
+rule curation:
+    input:
+        "results/curation/Scaff_HiC.final.pretext"
 
 #Filter PacBio HiFi reads
 rule hifiadapterfilt:
@@ -72,7 +99,7 @@ rule hifiadapterfilt:
         ntasks = config["adapterfilt_threads"]
     params:
         threads = config["adapterfilt_threads"],
-        installdir = config["adapterfilt_install_dir"],
+        installdir = config["adapterfilt_install_dir"]
     shell:
         r"""
         export PATH={params.installdir}/DB:{params.installdir}:$PATH
@@ -93,7 +120,9 @@ rule hifiadapterfilt:
 #Count k-mers for genomescope and smudgeplot
 rule count_kmers:
     output:
-        histo = "results/pre_assembly/reads.histo"
+        histo = temp("results/pre_assembly/reads.histo"),
+        kmc_pre = temp("results/pre_assembly/reads.kmc_pre"),
+        kmc_suf = temp("results/pre_assembly/reads.kmc_suf")
     input:
         pacbio
     resources:
@@ -125,7 +154,9 @@ rule count_kmers:
             histogram \
             results/pre_assembly/reads.histo \
             -cx{params.cx}
-        rm -r -f results/pre_assembly/tmp FILES
+        if [ -f {output.histo} ]; then
+            rm -r -f results/pre_assembly/tmp FILES
+        fi
         """
 
 #Run Genomescope
@@ -155,15 +186,17 @@ rule smudgeplot:
     output:
         expand("results/pre_assembly/smudgeplot/ploidy{ploidy}_smudgeplot.png", ploidy=config["smudge_ploidy"]),
     input:
-        rules.count_kmers.output.histo
+        histo = rules.count_kmers.output.histo,
+        prefix = rules.count_kmers.output.kmc_pre,
+        suffix = rules.count_kmers.output.kmc_suf
     params:
         ploidy = config["smudge_ploidy"],
         kmc_path = config["KMC_path"],
         k = config["KMC_k"],
     shell:
         r"""
-        L=$(smudgeplot.py cutoff {input} L)
-        U=$(smudgeplot.py cutoff {input} U)
+        L=$(smudgeplot.py cutoff {input.histo} L)
+        U=$(smudgeplot.py cutoff {input.histo} U)
         export PATH={params.kmc_path}/bin:$PATH
         kmc_tools transform \
             results/pre_assembly/reads \
@@ -180,6 +213,9 @@ rule smudgeplot:
             results/pre_assembly/smudgeplot/kmcdb_L"$L"_U"$U"_coverages.tsv \
             -o results/pre_assembly/smudgeplot/ploidy{params.ploidy} \
             -k {params.k}
+        if [ -f {output} ]; then
+            rm results/pre_assembly/reads.kmc*
+        fi
         """
 
 #Perform genome assembly with hifiasm using pacbio reads and hic reads
@@ -190,7 +226,8 @@ rule assembly_hifiams:
     input:
         pacbio = rules.hifiadapterfilt.output.pacbioFilt,
         hicF = hicF,
-        hicR = hicR
+        hicR = hicR,
+        ont = ont
     resources:
         time = config["hifiasm_cluster_time"],
         mem_per_cpu = config["hifiasm_mem_per_cpu"],
@@ -198,7 +235,8 @@ rule assembly_hifiams:
     params:
         threads = config["hifiasm_threads"],
         hF = hicF.split("/")[-1],
-        hR = hicR.split("/")[-1]
+        hR = hicR.split("/")[-1],
+        ont = hifiasm_ont
     shell:
         r"""
         export CWD=$PWD
@@ -210,6 +248,7 @@ rule assembly_hifiams:
         hifiasm \
             -o assembly \
             -t{params.threads} \
+            {params.ont} \
             --h1 {params.hF} \
             --h2 {params.hR} \
             ./pacbio.filt.fastq.gz
@@ -219,6 +258,9 @@ rule assembly_hifiams:
         awk '/^S/{{print ">"$2"\n"$3}}' $CWD/results/assembly/assembly.hic.hap2.p_ctg.gfa \
             | fold > $CWD/{output.hap2}
         cd $CWD && rm -r assembly_tmp
+        if [ -f {output.hap1} ]; then
+            rm results/assembly/*bin
+        fi
         """
 
 #Run busco on assembly
@@ -250,7 +292,7 @@ rule busco:
 #Create Meryl Database
 rule create_meryl_db:
     output:
-        directory("results/scaffolding/meryl/assembly.hic.{hap}.p_ctg.meryl")
+        temp(directory("results/scaffolding/meryl/assembly.hic.{hap}.p_ctg.meryl"))
     input:
         "results/assembly/assembly.hic.{hap}.p_ctg.fa"
     resources:
@@ -304,12 +346,15 @@ rule meryl_filter:
             -sequence {input.hicF} {input.hicR} \
             -mers results/scaffolding/meryl/only_hap2.meryl \
             -output {output.hicFwoH2} {output.hicRwoH2}
+        if [ -f {output.hicFwoH1} ]; then
+            rm -r results/scaffolding/meryl/only*
+        fi
         """
 
 #Prepare filtered Hi-C reads for scaffolding
 rule map_hic:
     output:
-        mapping = "results/scaffolding/{hap}_mapping.bam"
+        mapping = temp("results/scaffolding/{hap}_mapping.bam")
     input: 
         assembly = "results/assembly/assembly.hic.{hap}.p_ctg.fa",
         hicF = "results/scaffolding/meryl/hicF_{hap}.fastq.gz",
@@ -319,27 +364,30 @@ rule map_hic:
     params:
         t = config["yahs_threads"]
     shell:
-        """
-        bwa index {input.assembly}
-        samtools faidx {input.assembly}
+        r"""
+        if [ ! -f {input.assembly}.bwt ]; then
+            bwa index {input.assembly}
+        fi
+        if [ ! -f {input.assembly}.fai ]; then
+            samtools faidx {input.assembly}
+        fi
         bwa mem \
             -t {params.t} \
-            -R '@RG\\tSM:{wildcards.hap}\\tID:{wildcards.hap}' \
+            -R '@RG\tSM:{wildcards.hap}\tID:{wildcards.hap}' \
             -5SPM \
             {input.assembly} {input.hicF} {input.hicR} \
-        | samtools view -buS - \
-            > results/scaffolding/{wildcards.hap}_mapping.bam
+        | samtools view -bu - > results/scaffolding/{wildcards.hap}_mapping.bam
         """
 
 rule prepare_hic:
     output:
-        markdup = "results/scaffolding/{hap}_hic_markdup.sort_n.bam"
+        markdup = temp("results/scaffolding/{hap}_hic_markdup.sort_n.bam")
     input:
         mapping = rules.map_hic.output.mapping
     resources:
-        ntasks = config["yahs_threads"],
+        ntasks = config["yahs_threads"]
     params:
-        t = config["yahs_threads"],
+        t = config["yahs_threads"]
     shell:
         r"""
         samtools sort \
@@ -371,8 +419,7 @@ rule prepare_hic:
             -o {output.markdup} \
             results/scaffolding/{wildcards.hap}_mapping.markdup.bam
         if [ -f {output.markdup} ]; then
-            rm results/scaffolding/{wildcards.hap}_mapping.bam \
-                results/scaffolding/{wildcards.hap}_mapping.sorted.bam \
+                rm results/scaffolding/{wildcards.hap}_mapping.sorted.bam \
                 results/scaffolding/{wildcards.hap}_mapping.fixmate.bam \
                 results/scaffolding/{wildcards.hap}_mapping.fixmate.sorted.bam \
                 results/scaffolding/{wildcards.hap}_mapping.markdup.bam
@@ -397,6 +444,9 @@ rule scaffold_hap:
             2> results/scaffolding/yahs_{wildcards.hap}.err
         gfastats {output} \
             > results/scaffolding/{wildcards.hap}_scaffolds_final.stats
+        if [ -f {output} ]; then
+            rm results/scaffolding/{wildcards.hap}.bin
+        fi
         """
  
 #Remove adaptors and vector contamination
@@ -486,7 +536,8 @@ rule run_oatk_plant:
             -m {params.oatk_db}/{params.lineage}_mito.fam \
             -p {params.oatk_db}/{params.lineage}_pltd.fam \
             -o results/organelles/oatk \
-            {input.pacbio}
+            {input.pacbio} \
+        || touch {output}
         """
 
 rule run_oatk_nonplant:
@@ -513,8 +564,159 @@ rule run_oatk_nonplant:
             --nhmmscan nhmmscan \
             -m {params.oatk_db}/{params.lineage}_mito.fam \
             -o results/organelles/oatk \
-            {input.pacbio}
+            {input.pacbio} \
+        || touch {output}
         """     
+
+rule concat_scaff:
+    output:
+        "results/curation/data/ref.fa"
+    input:
+        hap1 = "results/decontamination/hap1/hap1_scaffolds_final.decon.fasta",
+        hap2 = "results/decontamination/hap2/hap2_scaffolds_final.decon.fasta"
+    shell:
+        r"""
+        cat {input.hap1} | sed "s/>/>H1_/g" > {output}
+        cat {input.hap2} | sed "s/>/>H2_/g" >> {output}
+        """
+
+rule create_pretext:
+    output:
+        "results/curation/Scaff_HiC.mapping.pretext"
+    input:
+        hicF = hicF,
+        hicR = hicR,
+        scaff = rules.concat_scaff.output
+    resources:
+        mem_per_cpu = config["curation_mapping_mem"],
+        ntasks = config["curation_mapping_threads"]
+    shell:
+        r"""
+        [ -f {input.scaff}.bwt ] || bwa index {input.scaff}
+        bwa mem -t {resources.ntasks} -5SPM \
+            {input.scaff} {input.hicF} {input.hicR} \
+        | samtools view -buS - \
+        | samtools sort -@3 -n -T tmp1 -O bam - \
+        | samtools fixmate -mr - - \
+        | samtools sort -@3 -T tmp2 -O bam - \
+        | samtools markdup -rsS - - \
+            2> results/curation/hic_markdup.stats \
+        | samtools sort -@3 -T tmp3 -O bam \
+        > results/curation/HiC_BotHapScaff.markdup.sort.bam
+        samtools view -h results/curation/HiC_BotHapScaff.markdup.sort.bam \
+        | PretextMap -o {output} --sortby length --sortoder descend --mapq 0
+        """
+
+rule curation_coverage:
+    output:
+        "results/curation/Scaff_coverage.bw"
+    input:
+        pacbio = pacbio,
+        scaff = rules.concat_scaff.output
+    resources:
+        mem_per_cpu = config["curation_mapping_mem"],
+        ntasks = config["curation_mapping_threads"]
+    shell:
+        r"""
+        minimap2 \
+            -ax map-hifi \
+            -t {resources.ntasks} \
+            {input.scaff} {input.pacbio} \
+        | samtools sort -@{resources.ntasks} -O BAM -o results/curation/Scaff_coverage.bam
+        samtools view -b -F 256 results/curation/Scaff_coverage.bam > results/curation/Scaff_coverage.prim.bam
+        samtools index results/curation/Scaff_coverage.prim.bam
+        bamCoverage -b results/curation/Scaff_coverage.prim.bam -o {output}
+        """
+
+rule curation_repeats:
+    output:
+        "results/curation/out/Scaff_repeat_density.bw"
+    input:
+        scaff = rules.concat_scaff.output
+    params:
+        installdir = config["curation_install_dir"]
+    resources:
+        mem_per_cpu = config["curation_mapping_mem"],
+        ntasks = config["curation_mapping_threads"]
+    shell:
+        r"""
+        mkdir -p results/curation/tmp_repeat results/curation/out
+        export SINGULARITY_BIND="\
+            $PWD/results/curation/data:/data,\
+            $PWD/results/curation/out:/output,\
+            $PWD/results/curation/tmp_repeat:/tmp,\
+            "
+        singularity run {params.installdir}/runRepeat.sif -t Scaff || touch {output}
+        rm -rf results/curation/tmp_repeat
+        """
+
+rule curation_gaps:
+    output:
+        "results/curation/out/Scaff_gap.bedgraph"
+    input:
+        scaff = rules.concat_scaff.output
+    params:
+        installdir = config["curation_install_dir"]
+    resources:
+        mem_per_cpu = config["curation_mapping_mem"],
+        ntasks = config["curation_mapping_threads"]
+    shell:
+        r"""
+        mkdir -p results/curation/tmp_gaps results/curation/out
+        export SINGULARITY_BIND="\
+            $PWD/results/curation/data:/data,\
+            $PWD/results/curation/out:/output,\
+            $PWD/results/curation/tmp_gaps:/tmp,\
+            "
+        singularity run {params.installdir}/runGap.sif -t Scaff || touch {output}
+        rm -rf results/curation/tmp_gaps
+        """
+
+rule curation_telomeres:
+    output:
+        "results/curation/out/Scaff_telomere.bedgraph"
+    input:
+        scaff = rules.concat_scaff.output
+    params:
+        installdir = config["curation_install_dir"],
+        telo = config["curation_telomere_rep"]
+    resources:
+        mem_per_cpu = config["curation_mapping_mem"],
+        ntasks = config["curation_mapping_threads"]
+    shell:
+        r"""
+        mkdir -p results/curation/tmp_telo results/curation/out
+        export SINGULARITY_BIND=" \
+            $PWD/results/curation/data:/data,\
+            $PWD/results/curation/out:/output,\
+            $PWD/results/curation/tmp_telo:/tmp,\
+            "
+        singularity run {params.installdir}/runTelo.sif -t Scaff -s {params.telo} || touch {output}
+        rm -rf results/curation/tmp_telo
+        """
+
+rule update_pretext:
+    output:
+        pretext = "results/curation/Scaff_HiC.final.pretext"
+    input:
+        pretext = rules.create_pretext.output,
+        cov = rules.curation_coverage.output,
+        gaps = rules.curation_gaps.output,
+        reps = rules.curation_repeats.output,
+        telo = rules.curation_telomeres.output
+    shell:
+        r"""
+        cp {input.pretext} {output.pretext}
+        bigWigToBedGraph {input.cov} /dev/stdout \
+        | PretextGraph -i {output.pretext} -n "PB coverage"
+        bigWigToBedGraph {input.reps} /dev/stdout \
+        | PretextGraph -i {output.pretext} -n "Repeat density"
+        cat {input.gaps} \
+        | PretextGraph -i {output.pretext} -n "Gaps"
+        cat {input.telo} \
+        | awk -v OFS="\t" '{{$4 *= 1000; print}}' \
+        | PretextGraph -i {output.pretext} -n "Telomers"
+        """
         
 #Print software versions to file
 rule print_versions:
@@ -523,7 +725,8 @@ rule print_versions:
     params:
         kmc_path = config["KMC_path"],
         hifiadapterfilt = config["adapterfilt_install_dir"],
-        fcs_path = config["fcs_path"]
+        fcs_path = config["fcs_path"],
+        oatk_install = config["oatk_dir"]
     shell:
         r"""
         printf "Conda software versions:\n" > {output}
@@ -538,4 +741,6 @@ rule print_versions:
         cat {params.fcs_path}/run_fcsadaptor.sh | grep "^DEFAULT_VERSION" >> {output}
         printf "fcs.py:\t" >> {output}
         cat {params.fcs_path}/fcs.py | grep "^DEFAULT_VERSION" >> {output}
+        printf "oatk:\t" >> {output}
+        {params.oatk_install}/oatk --version >> {output}
         """
