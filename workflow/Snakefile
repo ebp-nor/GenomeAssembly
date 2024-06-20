@@ -127,6 +127,7 @@ rule count_kmers:
         pacbio
     resources:
         ntasks = config["KMC_t"]
+        time = config["KMC_time"] 
     params:
         k = config["KMC_k"],
         t = config["KMC_t"],
@@ -231,7 +232,8 @@ rule assembly_hifiams:
     resources:
         time = config["hifiasm_cluster_time"],
         mem_per_cpu = config["hifiasm_mem_per_cpu"],
-        ntasks = config["hifiasm_threads"]
+        ntasks = config["hifiasm_threads"],
+        partition = config["hifiasm_partition"]
     params:
         threads = config["hifiasm_threads"],
         hF = hicF.split("/")[-1],
@@ -589,7 +591,8 @@ rule create_pretext:
         scaff = rules.concat_scaff.output
     resources:
         mem_per_cpu = config["curation_mapping_mem"],
-        ntasks = config["curation_mapping_threads"]
+        ntasks = config["curation_mapping_threads"],
+        time = config["curation_time"]
     shell:
         r"""
         [ -f {input.scaff}.bwt ] || bwa index {input.scaff}

@@ -19,6 +19,7 @@ KMC_m: "38" #max RAM (GB)
 KMC_ci: "1" #kmer inclusion lower boundary
 KMC_cx: "10000" #kmer inclusion upper boundary
 KMC_cs: "10000" #kmer counter max value
+KMC_time: "48:0:0"
 
 ### Genomescope parameters ###
 GS_ploidy_range: ["1", "2", "4"] #ploidy levels to check
@@ -31,6 +32,7 @@ smudge_mem: "60G" #memory requirements
 hifiasm_threads: "10" #threads
 hifiasm_mem_per_cpu: "15G"
 hifiasm_cluster_time: "96:00:00"
+hifiasm_partition: "normal"
 
 ### BUSCO parameters ###
 busco_db_dir: "/cluster/projects/nn8013k/opt/busco_dbs/lineages"
@@ -75,3 +77,4 @@ curation_mapping_mem: "5G"
 curation_mapping_threads: "16"
 curation_install_dir: "/cluster/projects/nn8013k/opt/rapid-curation/rapid_hic_software/"
 curation_telomere_rep: "TTAGGG"
+curation_time: "48:0:0"
