@@ -27,6 +27,7 @@ GS_ploidy_range: ["1", "2", "4"] #ploidy levels to check
 ### Smudgeplot parameters ###
 smudge_ploidy: "2" #assumed ploidy level
 smudge_mem: "60G" #memory requirements
+smudge_time: "48:0:0"
 
 ### HifiAsm Assembly parameters ###
 hifiasm_threads: "10" #threads

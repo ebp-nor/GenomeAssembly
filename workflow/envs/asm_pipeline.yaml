@@ -20,3 +20,4 @@ dependencies:
   - pretext-suite
   - deeptools
   - ucsc-bigWigToBedGraph
+  - seqkit

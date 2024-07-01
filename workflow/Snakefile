@@ -39,6 +39,7 @@ rule all:
         expand("results/scaffolding/busco_{hap}_scaffolds_final_{lineage}", lineage=config["busco_lineage"], hap=HAPS),
         expand("results/decontamination/{hap}/{hap}_scaffolds_final.decon.fasta", hap=HAPS),
         oatk_isPlant(),
+        "results/stats/pb.stats",
         "results/curation/Scaff_HiC.final.pretext",
         "software_versions.txt"
 
@@ -89,6 +90,23 @@ rule curation:
     input:
         "results/curation/Scaff_HiC.final.pretext"
 
+rule reads_statistics:
+    output:
+        pb_stats = "results/stats/pb.stats",
+        h1_stats = "results/stats/hic1.stats",
+        h2_stats = "results/stats/hic2.stats"
+    input:
+        pacbio = pacbio,
+        hicF = hicF,
+        hicR = hicR
+    run:
+        if ont:
+            shell("seqkit stats -a {ont} > results/stats/ont.stats")
+        shell("seqkit stats -a {input.pacbio} > {output.pb_stats}")
+        shell("seqkit stats -a {input.hicF} > {output.h1_stats}")
+        shell("seqkit stats -a {input.hicR} > {output.h2_stats}")
+
+
 #Filter PacBio HiFi reads
 rule hifiadapterfilt:
     output:
@@ -126,7 +144,7 @@ rule count_kmers:
     input:
         pacbio
     resources:
-        ntasks = config["KMC_t"]
+        ntasks = config["KMC_t"],
         time = config["KMC_time"] 
     params:
         k = config["KMC_k"],
@@ -194,6 +212,8 @@ rule smudgeplot:
         ploidy = config["smudge_ploidy"],
         kmc_path = config["KMC_path"],
         k = config["KMC_k"],
+    resources:
+        time = config["smudge_time"],
     shell:
         r"""
         L=$(smudgeplot.py cutoff {input.histo} L)
