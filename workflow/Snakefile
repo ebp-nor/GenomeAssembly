@@ -37,6 +37,7 @@ rule all:
         expand("results/pre_assembly/smudgeplot/ploidy{ploidy}_smudgeplot.png", ploidy=config["smudge_ploidy"]),
         expand("results/assembly/busco_assembly.hic.{hap}.p_ctg_{lineage}", lineage=config["busco_lineage"], hap=HAPS),
         expand("results/scaffolding/busco_{hap}_scaffolds_final_{lineage}", lineage=config["busco_lineage"], hap=HAPS),
+        expand("results/curation/data/busco_ref_{lineage}", lineage=config["busco_lineage"]),
         expand("results/decontamination/{hap}/{hap}_scaffolds_final.decon.fasta", hap=HAPS),
         oatk_isPlant(),
         "results/stats/pb.stats",
@@ -387,12 +388,12 @@ rule map_hic:
         t = config["yahs_threads"]
     shell:
         r"""
-        if [ ! -f {input.assembly}.bwt ]; then
-            bwa index {input.assembly}
-        fi
-        if [ ! -f {input.assembly}.fai ]; then
-            samtools faidx {input.assembly}
-        fi
+        #if [ ! -f {input.assembly}.bwt ]; then
+        bwa index {input.assembly}
+        #fi
+        #if [ ! -f {input.assembly}.fai ]; then
+        samtools faidx {input.assembly}
+        #fi
         bwa mem \
             -t {params.t} \
             -R '@RG\tSM:{wildcards.hap}\tID:{wildcards.hap}' \
@@ -457,7 +458,7 @@ rule scaffold_hap:
         bamfile = "results/scaffolding/{hap}_hic_markdup.sort_n.bam"
     resources:
         ntasks = config["yahs_threads"],
-        time = config["yahs_cluster_time"]
+        time = config["yahs_cluster_time"],
     shell:
         r"""
         yahs {input.assembly} {input.bamfile} \
