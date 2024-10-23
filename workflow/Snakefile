@@ -270,6 +270,7 @@ rule assembly_hifiams:
         ln -sf {input.hicR} ./
         hifiasm \
             -o assembly \
+            --dual-scaf \
             -t{params.threads} \
             {params.ont} \
             --h1 {params.hF} \
