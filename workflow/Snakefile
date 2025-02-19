@@ -606,7 +606,9 @@ rule concat_scaff:
 
 rule create_pretext:
     output:
-        "results/curation/Scaff_HiC.mapping.pretext"
+        q0 = "results/curation/Scaff_HiC.mapping.pretext",
+        q5 = "results/curation/Scaff_HiC.mapping.q5.pretext",
+        q10 = "results/curation/Scaff_HiC.mapping.q10.pretext",
     input:
         hicF = hicF,
         hicR = hicR,
@@ -629,7 +631,14 @@ rule create_pretext:
         | samtools sort -@3 -T tmp3 -O bam \
         > results/curation/HiC_BotHapScaff.markdup.sort.bam
         samtools view -h results/curation/HiC_BotHapScaff.markdup.sort.bam \
-        | PretextMap -o {output} --sortby length --sortoder descend --mapq 0
+        | PretextMap -o {output.q0} --sortby length --sortoder descend --mapq 0
+
+        samtools view -h results/curation/HiC_BotHapScaff.markdup.sort.bam \
+        | PretextMap -o {output.q5} --sortby length --sortoder descend --mapq 5
+
+        samtools view -h results/curation/HiC_BotHapScaff.markdup.sort.bam \
+        | PretextMap -o {output.q10} --sortby length --sortoder descend --mapq 10
+
         """
 
 rule curation_coverage:
@@ -724,7 +733,7 @@ rule update_pretext:
     output:
         pretext = "results/curation/Scaff_HiC.final.pretext"
     input:
-        pretext = rules.create_pretext.output,
+        pretext = rules.create_pretext.output.q0,
         cov = rules.curation_coverage.output,
         gaps = rules.curation_gaps.output,
         reps = rules.curation_repeats.output,
