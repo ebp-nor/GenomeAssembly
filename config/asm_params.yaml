@@ -1,11 +1,12 @@
 ### Input data ###
 #Define the absolute path to the PACBIO reads
-pacbio: "/cluster/projects/nn8013k/results/species/Spinus_spinus/bSpiSpi1/genomic_data/pacbio/bSpiSpi1.hifi.fastq.gz"
+pacbio: ""
 #Define the absolute path to the HIC reads, both forward and reverse (hicF and hicR)
-hicF: "/cluster/projects/nn8013k/results/species/Spinus_spinus/bSpiSpi1/genomic_data/hic/1-25-146-Spinus-spinus_S98_L004_R1_001.fastq.gz"
-hicR: "/cluster/projects/nn8013k/results/species/Spinus_spinus/bSpiSpi1/genomic_data/hic/1-25-146-Spinus-spinus_S98_L004_R2_001.fastq.gz"
+hicF: ""
+hicR: ""
 #Define the absolute path to Oxford Nanopore reads, if available. If not, leave the parameter as an empty string ("")
 ont: ""
+r10: ""
 
 ### Adapterfilt parameters ###
 adapterfilt_install_dir: "/cluster/projects/nn8013k/opt/HiFiAdapterFilt"
