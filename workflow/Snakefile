@@ -744,6 +744,7 @@ rule update_pretext:
         telo = rules.curation_telomeres.output
     shell:
         r"""
+        set +e
         cp {input.pretext} {output.pretext}
         bigWigToBedGraph {input.cov} /dev/stdout \
         | PretextGraph -i {output.pretext} -n "PB coverage"
