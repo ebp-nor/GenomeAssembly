@@ -7,10 +7,14 @@ hicR = config["hicR"]
 HAPS = ["hap1", "hap2"]
 #Check if ONT reads are defined
 ont = config["ont"]
-if ont:
-    hifiasm_ont = f" --ul {ont}"
+#are the ONT reads R10, then maybe do assembly based on those instead of HiFi
+r10 = config["r10"]
+if ont and r10:
+    hifiasm_ont = f" --ont {ont}"
+elif ont:
+    hifiasm_ont = f" --ul {ont} ./pacbio.filt.fastq.gz"
 else:
-    hifiasm_ont = ""
+    hifiasm_ont = f" ./pacbio.filt.fastq.gz"
     ont = []
 
 #Decide which oatk analysis to run
@@ -241,7 +245,7 @@ rule smudgeplot:
         """
 
 #Perform genome assembly with hifiasm using pacbio reads and hic reads
-rule assembly_hifiams:
+rule assembly_hifiasm:
     output:
         hap1 = "results/assembly/assembly.hic.hap1.p_ctg.fa",
         hap2 = "results/assembly/assembly.hic.hap2.p_ctg.fa"
@@ -249,7 +253,7 @@ rule assembly_hifiams:
         pacbio = rules.hifiadapterfilt.output.pacbioFilt,
         hicF = hicF,
         hicR = hicR,
-        ont = ont
+        ont = ont,
     resources:
         time = config["hifiasm_cluster_time"],
         mem_per_cpu = config["hifiasm_mem_per_cpu"],
@@ -257,6 +261,7 @@ rule assembly_hifiams:
         partition = config["hifiasm_partition"]
     params:
         threads = config["hifiasm_threads"],
+        #r10 = config["r10"],
         hF = hicF.split("/")[-1],
         hR = hicR.split("/")[-1],
         ont = hifiasm_ont
@@ -272,10 +277,9 @@ rule assembly_hifiams:
             -o assembly \
             --dual-scaf \
             -t{params.threads} \
-            {params.ont} \
             --h1 {params.hF} \
             --h2 {params.hR} \
-            ./pacbio.filt.fastq.gz
+            {params.ont} 
         mv assembly.* $CWD/results/assembly
         awk '/^S/{{print ">"$2"\n"$3}}' $CWD/results/assembly/assembly.hic.hap1.p_ctg.gfa \
             | fold > $CWD/{output.hap1}
