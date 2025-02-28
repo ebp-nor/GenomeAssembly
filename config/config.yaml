@@ -7,6 +7,7 @@ scheduler: greedy
 use-conda: True
 local-cores: 2
 jobs: 50
+use-conda: True
 
 ### Settings for cluster submission with slurm ###
 cluster:

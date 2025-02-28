@@ -6,29 +6,25 @@ hicF: ""
 hicR: ""
 #Define the absolute path to Oxford Nanopore reads, if available. If not, leave the parameter as an empty string ("")
 ont: ""
-r10: ""
+r10: False
 
 ### Adapterfilt parameters ###
 adapterfilt_install_dir: "/cluster/projects/nn8013k/opt/HiFiAdapterFilt"
 adapterfilt_threads: "16"
 
-### KMC k-mer counting parameters ###
-KMC_path: "/cluster/projects/nn8013k/opt/KMC"
-KMC_k: "32" #kmer-size
-KMC_t: "10" #threads
-KMC_m: "38" #max RAM (GB)
-KMC_ci: "1" #kmer inclusion lower boundary
-KMC_cx: "10000" #kmer inclusion upper boundary
-KMC_cs: "10000" #kmer counter max value
-KMC_time: "48:0:0"
+### FastK parameters ###
+FastK_k: "32" #kmer-size
+FastK_t: "10" #threads
+FastK_m: "32" #memory
+FastK_time: "6:0:0"
 
 ### Genomescope parameters ###
 GS_ploidy_range: ["1", "2", "4"] #ploidy levels to check
+GS_time: "12:0:0"
 
 ### Smudgeplot parameters ###
-smudge_ploidy: "2" #assumed ploidy level
-smudge_mem: "60G" #memory requirements
-smudge_time: "48:0:0"
+smudge_time: "12:0:0"
+smudgeplot_conda_env: "smudge0.4"
 
 ### HifiAsm Assembly parameters ###
 hifiasm_threads: "10" #threads

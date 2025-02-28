@@ -6,18 +6,16 @@ dependencies:
   - samtools
   - bwa
   - yahs
-  - hifiasm=0.19.5
+  - hifiasm
   - blast
-  - busco=5.4.7
-  - smudgeplot
+  - busco
   - genomescope2
   - bamtools
-  - snakemake
+  - snakemake=7
   - merqury
-  - samtools
-  - meryl
   - minimap2
   - pretext-suite
   - deeptools
   - ucsc-bigWigToBedGraph
   - seqkit
+  - fastk
