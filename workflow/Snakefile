@@ -127,7 +127,11 @@ def fcs_input(wildcards):
 
 def curation_out(wildcards):
     if hicF and hicR:
-        return("results/curation/Scaff_HiC.final.pretext")
+        output = []
+        for q in ["", "q5.", "q10."]:
+            for hr in ["", "hr."]:
+                output.append(f"results/curation/Scaff_HiC.{q}{hr}final.pretext")
+        return(output)
     else:
         return("software_versions.txt")
    
@@ -694,6 +698,9 @@ rule create_pretext:
         q0 = "results/curation/Scaff_HiC.mapping.pretext",
         q5 = "results/curation/Scaff_HiC.mapping.q5.pretext",
         q10 = "results/curation/Scaff_HiC.mapping.q10.pretext",
+        q0hr = "results/curation/Scaff_HiC.mapping.hr.pretext",
+        q5hr = "results/curation/Scaff_HiC.mapping.q5.hr.pretext",
+        q10hr = "results/curation/Scaff_HiC.mapping.q10.hr.pretext"
     input:
         hicF = hicF,
         hicR = hicR,
@@ -716,11 +723,15 @@ rule create_pretext:
         | samtools sort -@3 -T tmp3 -O bam \
         > results/curation/HiC_BotHapScaff.markdup.sort.bam
         samtools view -h results/curation/HiC_BotHapScaff.markdup.sort.bam \
+        | PretextMap --highRes -o {output.q0hr} --sortby length --sortoder descend --mapq 0
+        samtools view -h results/curation/HiC_BotHapScaff.markdup.sort.bam \
+        | PretextMap --highRes -o {output.q5hr} --sortby length --sortoder descend --mapq 5
+        samtools view -h results/curation/HiC_BotHapScaff.markdup.sort.bam \
+        | PretextMap --highRes -o {output.q10hr} --sortby length --sortoder descend --mapq 10
+        samtools view -h results/curation/HiC_BotHapScaff.markdup.sort.bam \
         | PretextMap -o {output.q0} --sortby length --sortoder descend --mapq 0
-
         samtools view -h results/curation/HiC_BotHapScaff.markdup.sort.bam \
         | PretextMap -o {output.q5} --sortby length --sortoder descend --mapq 5
-
         samtools view -h results/curation/HiC_BotHapScaff.markdup.sort.bam \
         | PretextMap -o {output.q10} --sortby length --sortoder descend --mapq 10
 
@@ -818,9 +829,9 @@ rule curation_telomeres:
 
 rule update_pretext:
     output:
-        pretext = "results/curation/Scaff_HiC.final.pretext"
+        pretext = "results/curation/{filename}.final.pretext"
     input:
-        pretext = rules.create_pretext.output.q0,
+        pretext = "results/curation/{filename}.pretext",
         cov = rules.curation_coverage.output,
         gaps = rules.curation_gaps.output,
         reps = rules.curation_repeats.output,
