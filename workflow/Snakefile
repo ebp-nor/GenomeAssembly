@@ -79,7 +79,7 @@ def asm_reads(wildcards):
 def gen_linkread_cmd(wildcards):
     cmd = ""
     if config["ont"]:
-        cmd += f'ln -sf ../input/ont.fastq.gz ./ont.fastq.gz'
+        cmd += f'ln -sf ../input/ont.fastq.gz ./ont.fastq.gz\n'
     if config["pacbio"] and not config["ont"]:
         cmd += f'ln -sf ../{rules.hifiadapterfilt.output.pacbioFilt} ./pacbio.filt.fastq.gz\n'
         return(cmd)
