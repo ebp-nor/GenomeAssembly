@@ -53,7 +53,9 @@ def smudgeplot_out(wildcards):
     return(files)
 
 def read_stats(wildcards):
-    files = ["results/stats/hicF.stats", "results/stats/hicR.stats"]
+    files = []
+    if hicF and hicR:
+        files.extend(["results/stats/hicF.stats", "results/stats/hicR.stats"])
     if config["pacbio"]:
         files.append("results/stats/pacbio.stats")
     if config["ont"]:
@@ -112,25 +114,51 @@ def prio_reads(wildcards):
 
 def assembly_out(wildcards):
     output = []
-    if hicF and hicR:
+    if config["haploid"]:
+        output.append("results/assembly/busco_assembly.bp.p_ctg_"+config["busco_lineage"])
+        if hicF and hicR:
+            output.append("results/scaffolding/busco_haploid_scaffolds_final_"+config["busco_lineage"])
+    elif hicF and hicR:
         output.extend(expand("results/assembly/busco_assembly.hic.{hap}.p_ctg_{lineage}", lineage=config["busco_lineage"], hap=HAPS))
         output.extend(expand("results/scaffolding/busco_{hap}_scaffolds_final_{lineage}", lineage=config["busco_lineage"], hap=HAPS))
     else:
         output.extend(expand("results/assembly/busco_assembly.dip.{hap}.p_ctg_{lineage}", lineage=config["busco_lineage"], hap=HAPS))
     return(output)
 
+def decontam_out(wildcards):
+    output = []
+    if config["haploid"]:
+        output.append("results/decontamination/haploid/busco_haploid_final.decon_"+config["busco_lineage"])
+    else:
+        output.extend(expand("results/decontamination/{hap}/busco_{hap}_final.decon_{lineage}", lineage=config["busco_lineage"], hap=HAPS))
+    return(output)
+
 def fcs_input(wildcards):
-    if hicF and hicR:
+    if config["haploid"]:
+        if hicF and hicR:
+            return("results/scaffolding/haploid_scaffolds_final.fa")
+        else:
+            return("results/assembly/assembly.bp.p_ctg.fa")
+    elif hicF and hicR:
         return("results/scaffolding/{hap}_scaffolds_final.fa")
     else:
         return("results/assembly/assembly.dip.{hap}.p_ctg.fa")
+
+def concat_in(wildcards):
+    output = {}
+    if config["haploid"]:
+        output["haploid"] = "results/decontamination/haploid/haploid_final.decon.fa"
+    else:
+        output["hap1"] = "results/decontamination/hap1/hap1_final.decon.fa"
+        output["hap2"] = "results/decontamination/hap2/hap2_final.decon.fa"
+    return(output)
 
 def curation_out(wildcards):
     if hicF and hicR:
         output = []
         for q in ["", "q5.", "q10."]:
             for hr in ["", "hr."]:
-                output.append(f"results/curation/Scaff_HiC.{q}{hr}final.pretext")
+                output.append(f"results/curation/Scaff_HiC.mapping.{q}{hr}final.pretext")
         return(output)
     else:
         return("software_versions.txt")
@@ -144,7 +172,7 @@ rule all:
         genomescope_out,
         smudgeplot_out,
         assembly_out,
-        expand("results/decontamination/{hap}/busco_{hap}_final.decon_{lineage}", lineage=config["busco_lineage"], hap=HAPS),
+        decontam_out,
         oatk_isPlant(),
         read_stats,
         curation_out,
@@ -376,6 +404,39 @@ rule assembly_hifiasm_nohic:
         fi
         """
 
+rule assembly_hifiasm_haploid:
+    output:
+        assembly = "results/assembly/assembly.bp.p_ctg.fa"
+    input:
+        unpack(get_reads)
+    resources:
+        time = config["hifiasm_cluster_time"],
+        mem_per_cpu = config["hifiasm_mem_per_cpu"],
+        ntasks = config["hifiasm_threads"],
+        partition = config["hifiasm_partition"]
+    params:
+        threads = config["hifiasm_threads"],
+        mode = hifiasm_mode,
+        linkreads = gen_linkread_cmd
+    shell:
+        r"""
+        mkdir -p assembly_tmp 
+        cd assembly_tmp
+        {params.linkreads}
+        hifiasm \
+            -l0 \
+            -o assembly \
+            -t{params.threads} \
+            {params.mode} 
+        mv assembly.* ../results/assembly
+        awk '/^S/{{print ">"$2"\n"$3}}' ../results/assembly/assembly.bp.p_ctg.gfa \
+            | fold > ../{output.assembly}
+        cd .. && rm -r assembly_tmp
+        if [ -f {output.assembly} ]; then
+            rm results/assembly/*bin
+        fi
+        """
+
 #Run busco on assembly
 rule busco:
     output:
@@ -478,25 +539,44 @@ rule map_hic:
         t = config["yahs_threads"]
     shell:
         r"""
-        #if [ ! -f {input.assembly}.bwt ]; then
         bwa index {input.assembly}
-        #fi
-        #if [ ! -f {input.assembly}.fai ]; then
         samtools faidx {input.assembly}
-        #fi
         bwa mem \
             -t {params.t} \
             -R '@RG\tSM:{wildcards.hap}\tID:{wildcards.hap}' \
             -5SPM \
             {input.assembly} {input.hicF} {input.hicR} \
-        | samtools view -bu - > results/scaffolding/{wildcards.hap}_mapping.bam
+        | samtools view -bu - > {output.mapping}
+        """
+
+rule map_hic_haploid:
+    output:
+        mapping = temp("results/scaffolding/haploid_mapping.bam")
+    input:
+        assembly = "results/assembly/assembly.bp.p_ctg.fa",
+        hicF = hicF,
+        hicR = hicR
+    resources:
+        ntasks = config["yahs_threads"]
+    params:
+        t = config["yahs_threads"]
+    shell:
+        r"""
+        bwa index {input.assembly}
+        samtools faidx {input.assembly}
+        bwa mem \
+         -t {params.t} \
+         -R '@RG\tSM:haploid\tID:haploid' \
+         -5SPM \
+         {input.assembly} {input.hicF} {input.hicR} \
+        | samtools view -bu - > {output.mapping}
         """
 
 rule prepare_hic:
     output:
         markdup = temp("results/scaffolding/{hap}_hic_markdup.sort_n.bam")
     input:
-        mapping = rules.map_hic.output.mapping
+        mapping = "results/scaffolding/{hap}_mapping.bam"
     resources:
         ntasks = config["yahs_threads"]
     params:
@@ -559,6 +639,28 @@ rule scaffold_hap:
             > results/scaffolding/{wildcards.hap}_scaffolds_final.stats
         if [ -f {output} ]; then
             rm results/scaffolding/{wildcards.hap}.bin
+        fi
+        """
+
+rule scaffold_haploid:
+    output:
+        "results/scaffolding/haploid_scaffolds_final.fa"
+    input:
+        assembly = "results/assembly/assembly.bp.p_ctg.fa",
+        bamfile = "results/scaffolding/haploid_hic_markdup.sort_n.bam"
+    resources:
+        ntasks = config["yahs_threads"],
+        time = config["yahs_cluster_time"],
+    shell:
+        r"""
+        yahs {input.assembly} {input.bamfile} \
+            -o results/scaffolding/haploid \
+            1> results/scaffolding/yahs_haploid.out \
+            2> results/scaffolding/yahs_haploid.err
+        gfastats {output} \
+            > results/scaffolding/haploid_scaffolds_final.stats
+        if [ -f {output} ]; then
+            rm results/scaffolding/haploid.bin
         fi
         """
  
@@ -685,13 +787,13 @@ rule concat_scaff:
     output:
         "results/curation/data/ref.fa"
     input:
-        hap1 = "results/decontamination/hap1/hap1_final.decon.fa",
-        hap2 = "results/decontamination/hap2/hap2_final.decon.fa"
-    shell:
-        r"""
-        cat {input.hap1} | sed "s/>/>H1_/g" > {output}
-        cat {input.hap2} | sed "s/>/>H2_/g" >> {output}
-        """
+        unpack(concat_in)
+    run:
+        if "haploid" in input.keys():
+            shell("ln -sf ${{PWD}}/{input.haploid} ${{PWD}}/{output}")
+        else:
+            shell('cat {input.hap1} | sed "s/>/>H1_/g" > {output}')
+            shell('cat {input.hap2} | sed "s/>/>H2_/g" >> {output}')
 
 rule create_pretext:
     output:
@@ -841,14 +943,18 @@ rule update_pretext:
         set +e
         cp {input.pretext} {output.pretext}
         bigWigToBedGraph {input.cov} /dev/stdout \
-        | PretextGraph -i {output.pretext} -n "Coverage"
+        | PretextGraph -i {output.pretext} -n "Coverage" \
+        || touch {output.pretext}
         bigWigToBedGraph {input.reps} /dev/stdout \
-        | PretextGraph -i {output.pretext} -n "Repeat density"
+        | PretextGraph -i {output.pretext} -n "Repeat density" \
+        || touch {output.pretext}
         cat {input.gaps} \
-        | PretextGraph -i {output.pretext} -n "Gaps"
+        | PretextGraph -i {output.pretext} -n "Gaps" \
+        || touch {output.pretext}
         cat {input.telo} \
         | awk -v OFS="\t" '{{$4 *= 1000; print}}' \
-        | PretextGraph -i {output.pretext} -n "Telomers"
+        | PretextGraph -i {output.pretext} -n "Telomers" \
+        || touch {output.pretext}
         """
         
 #Print software versions to file

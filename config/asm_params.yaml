@@ -8,6 +8,9 @@ hicR: ""
 ont: ""
 r10: False
 
+#Define if the species is haploid or not
+haploid: True
+
 ### Adapterfilt parameters ###
 adapterfilt_install_dir: "/cluster/projects/nn8013k/opt/HiFiAdapterFilt"
 adapterfilt_threads: "16"
