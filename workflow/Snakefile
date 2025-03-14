@@ -394,9 +394,9 @@ rule assembly_hifiasm_nohic:
             -t{params.threads} \
             {params.mode} 
         mv assembly.* ../results/assembly
-        awk '/^S/{{print ">"$2"\n"$3}}' ../results/assembly/assembly.bin.hap1.p_ctg.gfa \
+        awk '/^S/{{print ">"$2"\n"$3}}' ../results/assembly/assembly.dip.hap1.p_ctg.gfa \
             | fold > ../{output.hap1}
-        awk '/^S/{{print ">"$2"\n"$3}}' ../results/assembly/assembly.bin.hap2.p_ctg.gfa \
+        awk '/^S/{{print ">"$2"\n"$3}}' ../results/assembly/assembly.dip.hap2.p_ctg.gfa \
             | fold > ../{output.hap2}
         cd .. && rm -r assembly_tmp
         if [ -f {output.hap1} ]; then
@@ -686,7 +686,7 @@ rule fcs_adaptor:
             --container-engine singularity \
             --image {params.fcs_path}/fcs-adaptor.sif
         sed 's/lcl|/clean/g' \
-            results/decontamination/{wildcards.hap}/adaptor_output/cleaned_sequences/{wildcards.hap}_scaffolds_final.fa > {output}
+            results/decontamination/{wildcards.hap}/adaptor_output/cleaned_sequences/*.fa > {output}
         """
  
  #Run decontamination pipeline
