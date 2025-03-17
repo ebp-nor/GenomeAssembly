@@ -122,7 +122,7 @@ def assembly_out(wildcards):
         output.extend(expand("results/assembly/busco_assembly.hic.{hap}.p_ctg_{lineage}", lineage=config["busco_lineage"], hap=HAPS))
         output.extend(expand("results/scaffolding/busco_{hap}_scaffolds_final_{lineage}", lineage=config["busco_lineage"], hap=HAPS))
     else:
-        output.extend(expand("results/assembly/busco_assembly.dip.{hap}.p_ctg_{lineage}", lineage=config["busco_lineage"], hap=HAPS))
+        output.extend(expand("results/assembly/busco_assembly.bp.{hap}.p_ctg_{lineage}", lineage=config["busco_lineage"], hap=HAPS))
     return(output)
 
 def decontam_out(wildcards):
@@ -142,7 +142,7 @@ def fcs_input(wildcards):
     elif hicF and hicR:
         return("results/scaffolding/{hap}_scaffolds_final.fa")
     else:
-        return("results/assembly/assembly.dip.{hap}.p_ctg.fa")
+        return("results/assembly/assembly.bp.{hap}.p_ctg.fa")
 
 def concat_in(wildcards):
     output = {}
@@ -370,8 +370,8 @@ rule assembly_hifiasm:
 
 rule assembly_hifiasm_nohic:
     output:
-        hap1 = "results/assembly/assembly.dip.hap1.p_ctg.fa",
-        hap2 = "results/assembly/assembly.dip.hap2.p_ctg.fa"
+        hap1 = "results/assembly/assembly.bp.hap1.p_ctg.fa",
+        hap2 = "results/assembly/assembly.bp.hap2.p_ctg.fa"
     input:
         unpack(get_reads)
     resources:
@@ -394,9 +394,9 @@ rule assembly_hifiasm_nohic:
             -t{params.threads} \
             {params.mode} 
         mv assembly.* ../results/assembly
-        awk '/^S/{{print ">"$2"\n"$3}}' ../results/assembly/assembly.dip.hap1.p_ctg.gfa \
+        awk '/^S/{{print ">"$2"\n"$3}}' ../results/assembly/assembly.bp.hap1.p_ctg.gfa \
             | fold > ../{output.hap1}
-        awk '/^S/{{print ">"$2"\n"$3}}' ../results/assembly/assembly.dip.hap2.p_ctg.gfa \
+        awk '/^S/{{print ">"$2"\n"$3}}' ../results/assembly/assembly.bp.hap2.p_ctg.gfa \
             | fold > ../{output.hap2}
         cd .. && rm -r assembly_tmp
         if [ -f {output.hap1} ]; then
