@@ -813,7 +813,7 @@ rule create_pretext:
         time = config["curation_time"]
     shell:
         r"""
-        [ -f {input.scaff}.bwt ] || bwa index {input.scaff}
+        bwa index {input.scaff}
         bwa mem -t {resources.ntasks} -5SPM \
             {input.scaff} {input.hicF} {input.hicR} \
         | samtools view -buS - \
