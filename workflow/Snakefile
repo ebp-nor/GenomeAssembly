@@ -158,7 +158,7 @@ def curation_out(wildcards):
         output = []
         for q in ["", "q5.", "q10."]:
             for hr in ["", "hr."]:
-                output.append(f"results/curation/Scaff_HiC.mapping.{q}{hr}final.pretext")
+                output.append("results/curation/Scaff_HiC.mapping.%s%sfinal.pretext" % (q, hr))
         return(output)
     else:
         return("software_versions.txt")
