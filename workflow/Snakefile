@@ -825,17 +825,17 @@ rule create_pretext:
         | samtools sort -@3 -T tmp3 -O bam \
         > results/curation/HiC_BotHapScaff.markdup.sort.bam
         samtools view -h results/curation/HiC_BotHapScaff.markdup.sort.bam \
-        | PretextMap --highRes -o {output.q0hr} --sortby length --sortoder descend --mapq 0
+        | PretextMap --highRes -o {output.q0hr} --sortby length --sortorder descend --mapq 0
         samtools view -h results/curation/HiC_BotHapScaff.markdup.sort.bam \
-        | PretextMap --highRes -o {output.q5hr} --sortby length --sortoder descend --mapq 5
+        | PretextMap --highRes -o {output.q5hr} --sortby length --sortorder descend --mapq 5
         samtools view -h results/curation/HiC_BotHapScaff.markdup.sort.bam \
-        | PretextMap --highRes -o {output.q10hr} --sortby length --sortoder descend --mapq 10
+        | PretextMap --highRes -o {output.q10hr} --sortby length --sortorder descend --mapq 10
         samtools view -h results/curation/HiC_BotHapScaff.markdup.sort.bam \
-        | PretextMap -o {output.q0} --sortby length --sortoder descend --mapq 0
+        | PretextMap -o {output.q0} --sortby length --sortorder descend --mapq 0
         samtools view -h results/curation/HiC_BotHapScaff.markdup.sort.bam \
-        | PretextMap -o {output.q5} --sortby length --sortoder descend --mapq 5
+        | PretextMap -o {output.q5} --sortby length --sortorder descend --mapq 5
         samtools view -h results/curation/HiC_BotHapScaff.markdup.sort.bam \
-        | PretextMap -o {output.q10} --sortby length --sortoder descend --mapq 10
+        | PretextMap -o {output.q10} --sortby length --sortorder descend --mapq 10
 
         """
 
