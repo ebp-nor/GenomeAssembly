@@ -81,12 +81,12 @@ def asm_reads(wildcards):
 def gen_linkread_cmd(wildcards):
     cmd = ""
     if config["ont"]:
-        cmd += f'ln -sf ../input/ont.fastq.gz ./ont.fastq.gz\n'
+        cmd += f"ln -sf ../input/ont.fastq.gz ./ont.fastq.gz\n"
     if config["pacbio"] and not config["ont"]:
-        cmd += f'ln -sf ../{rules.hifiadapterfilt.output.pacbioFilt} ./pacbio.filt.fastq.gz\n'
+        cmd += f"ln -sf ../{rules.hifiadapterfilt.output.pacbioFilt} ./pacbio.filt.fastq.gz\n"
         return(cmd)
     if config["pacbio"] and not config["r10"]:
-        cmd += f'ln -sf ../{rules.hifiadapterfilt.output.pacbioFilt} ./pacbio.filt.fastq.gz\n'
+        cmd += f"ln -sf ../{rules.hifiadapterfilt.output.pacbioFilt} ./pacbio.filt.fastq.gz\n"
         return(cmd)
     return(cmd)
 
@@ -158,7 +158,7 @@ def curation_out(wildcards):
         output = []
         for q in ["", "q5.", "q10."]:
             for hr in ["", "hr."]:
-                output.append(f"results/curation/Scaff_HiC.mapping.{q}{hr}final.pretext")
+                output.append("results/curation/Scaff_HiC.mapping.%s%sfinal.pretext" % (q, hr))
         return(output)
     else:
         return("software_versions.txt")
@@ -825,17 +825,17 @@ rule create_pretext:
         | samtools sort -@3 -T tmp3 -O bam \
         > results/curation/HiC_BotHapScaff.markdup.sort.bam
         samtools view -h results/curation/HiC_BotHapScaff.markdup.sort.bam \
-        | PretextMap --highRes -o {output.q0hr} --sortby length --sortoder descend --mapq 0
+        | PretextMap --highRes -o {output.q0hr} --sortby length --sortorder descend --mapq 0
         samtools view -h results/curation/HiC_BotHapScaff.markdup.sort.bam \
-        | PretextMap --highRes -o {output.q5hr} --sortby length --sortoder descend --mapq 5
+        | PretextMap --highRes -o {output.q5hr} --sortby length --sortorder descend --mapq 5
         samtools view -h results/curation/HiC_BotHapScaff.markdup.sort.bam \
-        | PretextMap --highRes -o {output.q10hr} --sortby length --sortoder descend --mapq 10
+        | PretextMap --highRes -o {output.q10hr} --sortby length --sortorder descend --mapq 10
         samtools view -h results/curation/HiC_BotHapScaff.markdup.sort.bam \
-        | PretextMap -o {output.q0} --sortby length --sortoder descend --mapq 0
+        | PretextMap -o {output.q0} --sortby length --sortorder descend --mapq 0
         samtools view -h results/curation/HiC_BotHapScaff.markdup.sort.bam \
-        | PretextMap -o {output.q5} --sortby length --sortoder descend --mapq 5
+        | PretextMap -o {output.q5} --sortby length --sortorder descend --mapq 5
         samtools view -h results/curation/HiC_BotHapScaff.markdup.sort.bam \
-        | PretextMap -o {output.q10} --sortby length --sortoder descend --mapq 10
+        | PretextMap -o {output.q10} --sortby length --sortorder descend --mapq 10
 
         """
 
