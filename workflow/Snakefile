@@ -790,7 +790,7 @@ rule concat_scaff:
         unpack(concat_in)
     run:
         if "haploid" in input.keys():
-            shell("ln -sf ${{PWD}}/{input.haploid} ${{PWD}}/{output}")
+            shell("cp {input.haploid} {output}")
         else:
             shell('cat {input.hap1} | sed "s/>/>H1_/g" > {output}')
             shell('cat {input.hap2} | sed "s/>/>H2_/g" >> {output}')
@@ -813,7 +813,7 @@ rule create_pretext:
         time = config["curation_time"]
     shell:
         r"""
-        [ -f {input.scaff}.bwt ] || bwa index {input.scaff}
+        bwa index {input.scaff}
         bwa mem -t {resources.ntasks} -5SPM \
             {input.scaff} {input.hicF} {input.hicR} \
         | samtools view -buS - \
