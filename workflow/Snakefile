@@ -238,7 +238,7 @@ rule hifiadapterfilt:
         threads = config["adapterfilt_threads"],
         installdir = config["adapterfilt_install_dir"]
     container:
-        "docker://depot.galaxyproject.org/singularity/hifiadapterfilt%3A3.0.0--hdfd78af_0"
+        "docker://depot.galaxyproject.org/singularity/hifiadapterfilt:3.0.0--hdfd78af_0"
     shell:
         r"""
         export PATH={params.installdir}/DB:{params.installdir}:$PATH
@@ -692,6 +692,8 @@ rule fcs_adaptor:
     params:
         fcs_path = config["fcs_path"],
         fcs_image = config["fcs_adaptor_image"]
+    container:
+        "docker://quay.io/biocontainers/ncbi-fcs-gx:0.5.5--h9948957_0"
     shell:
         r"""
         mkdir -p results/decontamination/{wildcards.hap}/adaptor_output
@@ -722,6 +724,8 @@ rule fcs_gx:
         fcs_image = config["fcs_gx_image"],
         fcs_db = config["fcs_gx_db"],
         taxid = config["taxid"]
+    container:
+        "docker://quay.io/biocontainers/ncbi-fcs-gx:0.5.5--h9948957_0"
     shell:
         r"""
         mkdir -p results/decontamination/{wildcards.hap}/gx_output
