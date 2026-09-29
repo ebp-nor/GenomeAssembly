@@ -21,7 +21,7 @@ if hicF and hicR:
     shell(f"ln -sf {hicF} input/hicF.fastq.gz")
     shell(f"ln -sf {hicR} input/hicR.fastq.gz")
 
-
+"""
 #Decide which oatk analysis to run
 def oatk_isPlant():
     output = []
@@ -36,6 +36,7 @@ def oatk_isPlant():
         if config["ont"]:
             output.append("results/organelles/ont/oatk.mito.ctg.fasta")
     return(output)
+"""
 
 def genomescope_out(wildcards):
     files = []
@@ -236,6 +237,8 @@ rule hifiadapterfilt:
     params:
         threads = config["adapterfilt_threads"],
         installdir = config["adapterfilt_install_dir"]
+    container:
+        "docker://depot.galaxyproject.org/singularity/hifiadapterfilt%3A3.0.0--hdfd78af_0"
     shell:
         r"""
         export PATH={params.installdir}/DB:{params.installdir}:$PATH
@@ -264,6 +267,8 @@ rule count_kmers:
     resources:
         ntasks = config["FastK_t"],
         time = config["FastK_time"]
+    container:
+        "docker://quay.io/biocontainers/fastk:1.2--h71df26d_1"
     params:
         k = config["FastK_k"],
         t = config["FastK_t"],
@@ -295,6 +300,8 @@ rule genomescope:
     params:
         ploidy_range = config["GS_ploidy_range"],
         k = config["FastK_k"]
+    container:
+        "docker://quay.io/biocontainers/genomescope2:2.1.0--py313r44hdfd78af_0"
     shell:
         r"""
         genomescope2 \
@@ -313,6 +320,8 @@ rule smudgeplot:
     input:
         db_ktab = rules.count_kmers.output.db_ktab,
         db_hist = rules.count_kmers.output.db_hist
+    container:
+        "docker://quay.io/biocontainers/smudgeplot:0.5.3--py314h577a1d6_0"
     params:
         t = config["FastK_t"]
     resources:
