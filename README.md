@@ -1,8 +1,8 @@
 ## EBP-Nor Genome Assembly pipeline
 
 This repository contains the EBP-Nor genome assembly pipeline. This pipeline is implemented in snakemake.
-This pipeline is developed to create haplotype-resolved genome assemblies from long reads (PacBio HiFi or Oxford Nanopore) and optionally using HiC data.
-The pipeline is primarly designed for diploid eukaryotic organisms and is implemented to work on a linux cluster with slurm as workload manager.
+This pipeline is developed to create haplotype-resolved genome assemblies from long reads (PacBio HiFi and/or Oxford Nanopore) and optionally using HiC data.
+The pipeline is primarly designed for diploid eukaryotic organisms and is implemented to work on a Linux cluster with SLURM as workload manager.
 
 ## Requirements & Setup
 
