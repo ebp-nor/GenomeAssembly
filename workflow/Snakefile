@@ -352,6 +352,8 @@ rule assembly_hifiasm:
         threads = config["hifiasm_threads"],
         mode = hifiasm_mode,
         linkreads = gen_linkread_cmd
+    container:
+        "containers/hifiasm_hybrid.sif"
     shell:
         r"""
         export CWD=$PWD
@@ -389,6 +391,8 @@ rule assembly_hifiasm_nohic:
         mem_per_cpu = config["hifiasm_mem_per_cpu"],
         ntasks = config["hifiasm_threads"],
         partition = config["hifiasm_partition"]
+    container:
+        "containers/hifiasm_hybrid.sif"
     params:
         threads = config["hifiasm_threads"],
         mode = hifiasm_mode,
@@ -428,6 +432,8 @@ rule assembly_hifiasm_haploid:
         threads = config["hifiasm_threads"],
         mode = hifiasm_mode,
         linkreads = gen_linkread_cmd
+    container:
+        "containers/hifiasm_hybrid.sif"
     shell:
         r"""
         mkdir -p assembly_tmp
