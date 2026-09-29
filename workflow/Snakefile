@@ -21,7 +21,7 @@ if hicF and hicR:
     shell(f"ln -sf {hicF} input/hicF.fastq.gz")
     shell(f"ln -sf {hicR} input/hicR.fastq.gz")
 
-"""
+
 #Decide which oatk analysis to run
 def oatk_isPlant():
     output = []
@@ -36,7 +36,7 @@ def oatk_isPlant():
         if config["ont"]:
             output.append("results/organelles/ont/oatk.mito.ctg.fasta")
     return(output)
-"""
+
 
 def genomescope_out(wildcards):
     files = []
