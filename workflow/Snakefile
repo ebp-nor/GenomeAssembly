@@ -21,6 +21,7 @@ if hicF and hicR:
     shell(f"ln -sf {hicF} input/hicF.fastq.gz")
     shell(f"ln -sf {hicR} input/hicR.fastq.gz")
 
+"""
 #Decide which oatk analysis to run
 def oatk_isPlant():
     output = []
@@ -35,7 +36,8 @@ def oatk_isPlant():
         if config["ont"]:
             output.append("results/organelles/ont/oatk.mito.ctg.fasta")
     return(output)
-
+"""
+"""
 def genomescope_out(wildcards):
     files = []
     if config["pacbio"]:
@@ -162,7 +164,7 @@ def curation_out(wildcards):
         return(output)
     else:
         return("software_versions.txt")
-   
+
 #Define rules that do not need to be submitted to the cluster
 localrules: read_statistics, concat_scaff, update_pretext, print_versions
 
@@ -188,7 +190,7 @@ rule all_nocuration:
         oatk_isPlant(),
         read_stats,
         "software_versions.txt"
-        
+
 #Summary rule to run all pre-assembly steps
 rule pre_assembly:
     input:
@@ -201,15 +203,15 @@ rule assembly:
     input:
         assembly_out,
         "software_versions.txt"
-     
+
 #General rule for generationg a decontaminated assembly, but without running busco
 rule decontamination:
     input:
         assembly_out,
         expand("results/decontamination/{hap}/busco_{hap}_final.decon_{lineage}", lineage=config["busco_lineage"], hap=HAPS),
         "software_versions.txt"
-        
-#Rule for creating organelle assembly only        
+
+#Rule for creating organelle assembly only
 rule organelles:
     input:
         oatk_isPlant()
@@ -262,7 +264,7 @@ rule count_kmers:
         "input/{tech}.fastq.gz"
     resources:
         ntasks = config["FastK_t"],
-        time = config["FastK_time"] 
+        time = config["FastK_time"]
     params:
         k = config["FastK_k"],
         t = config["FastK_t"],
@@ -345,7 +347,7 @@ rule assembly_hifiasm:
     shell:
         r"""
         export CWD=$PWD
-        mkdir -p assembly_tmp 
+        mkdir -p assembly_tmp
         cd assembly_tmp
         ln -sf {input.hicF} ./hicF.fastq.gz
         ln -sf {input.hicR} ./hicR.fastq.gz
@@ -356,7 +358,7 @@ rule assembly_hifiasm:
             -t{params.threads} \
             --h1 hicF.fastq.gz \
             --h2 hicR.fastq.gz \
-            {params.mode} 
+            {params.mode}
         mv assembly.* $CWD/results/assembly
         awk '/^S/{{print ">"$2"\n"$3}}' $CWD/results/assembly/assembly.hic.hap1.p_ctg.gfa \
             | fold > $CWD/{output.hap1}
@@ -385,14 +387,14 @@ rule assembly_hifiasm_nohic:
         linkreads = gen_linkread_cmd
     shell:
         r"""
-        mkdir -p assembly_tmp 
+        mkdir -p assembly_tmp
         cd assembly_tmp
         {params.linkreads}
         hifiasm \
             -o assembly \
             --dual-scaf \
             -t{params.threads} \
-            {params.mode} 
+            {params.mode}
         mv assembly.* ../results/assembly
         awk '/^S/{{print ">"$2"\n"$3}}' ../results/assembly/assembly.bp.hap1.p_ctg.gfa \
             | fold > ../{output.hap1}
@@ -420,14 +422,14 @@ rule assembly_hifiasm_haploid:
         linkreads = gen_linkread_cmd
     shell:
         r"""
-        mkdir -p assembly_tmp 
+        mkdir -p assembly_tmp
         cd assembly_tmp
         {params.linkreads}
         hifiasm \
             -l0 \
             -o assembly \
             -t{params.threads} \
-            {params.mode} 
+            {params.mode}
         mv assembly.* ../results/assembly
         awk '/^S/{{print ">"$2"\n"$3}}' ../results/assembly/assembly.bp.p_ctg.gfa \
             | fold > ../{output.assembly}
@@ -485,7 +487,7 @@ rule create_meryl_db:
             output {output} \
             {input}
         """
-        
+
 #Run meryl for filtering Hi-C reads before scaffolding
 rule meryl_filter:
     output:
@@ -529,7 +531,7 @@ rule meryl_filter:
 rule map_hic:
     output:
         mapping = temp("results/scaffolding/{hap}_mapping.bam")
-    input: 
+    input:
         assembly = "results/assembly/assembly.hic.{hap}.p_ctg.fa",
         hicF = "results/scaffolding/meryl/hicF_{hap}.fastq.gz",
         hicR = "results/scaffolding/meryl/hicR_{hap}.fastq.gz"
@@ -663,7 +665,7 @@ rule scaffold_haploid:
             rm results/scaffolding/haploid.bin
         fi
         """
- 
+
 #Remove adaptors and vector contamination
 rule fcs_adaptor:
     output:
@@ -688,7 +690,7 @@ rule fcs_adaptor:
         sed 's/lcl|/clean/g' \
             results/decontamination/{wildcards.hap}/adaptor_output/cleaned_sequences/*.fa > {output}
         """
- 
+
  #Run decontamination pipeline
 rule fcs_gx:
     output:
@@ -725,7 +727,7 @@ rule fcs_gx:
             --output {output} \
             --contam-fasta-out results/decontamination/{wildcards.hap}/contam.fasta
         """
-        
+
 rule run_oatk_plant:
     output:
         "results/organelles/{tech}/oatk.pltd.ctg.fasta"
@@ -781,7 +783,7 @@ rule run_oatk_nonplant:
             -o results/organelles/{wildcards.tech}/oatk \
             {input} \
         || touch {output}
-        """     
+        """
 
 rule concat_scaff:
     output:
@@ -956,7 +958,7 @@ rule update_pretext:
         | PretextGraph -i {output.pretext} -n "Telomers" \
         || touch {output.pretext}
         """
-        
+
 #Print software versions to file
 rule print_versions:
     output:
@@ -980,3 +982,4 @@ rule print_versions:
         printf "oatk:\t" >> {output}
         {params.oatk_install}/oatk --version >> {output}
         """
+"""
