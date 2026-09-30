@@ -238,10 +238,10 @@ rule hifiadapterfilt:
         threads = config["adapterfilt_threads"],
         installdir = config["adapterfilt_install_dir"]
     container:
-        "docker://depot.galaxyproject.org/singularity/hifiadapterfilt:3.0.0--hdfd78af_0"
+        "shub://depot.galaxyproject.org/singularity/hifiadapterfilt:3.0.0--hdfd78af_0"
     shell:
         r"""
-        export PATH={params.installdir}/DB:{params.installdir}:$PATH
+        #export PATH={params.installdir}/DB:{params.installdir}:$PATH
         mkdir -p pbfilt_temp
         cd pbfilt_temp
         ln -sf {input} ./
@@ -466,6 +466,8 @@ rule busco:
     params:
         lineage = config["busco_lineage"],
         threads = config["busco_threads"]
+    container:
+        "docker://quay.io/biocontainers/busco:6.1.0--pyhdfd78af_2"
     shell:
         r"""
         busco \
