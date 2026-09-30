@@ -238,7 +238,7 @@ rule hifiadapterfilt:
         threads = config["adapterfilt_threads"],
         installdir = config["adapterfilt_install_dir"]
     container:
-        "shub://depot.galaxyproject.org/singularity/hifiadapterfilt:3.0.0--hdfd78af_0"
+        "https://depot.galaxyproject.org/singularity/hifiadapterfilt:3.0.0--hdfd78af_0"
     shell:
         r"""
         #export PATH={params.installdir}/DB:{params.installdir}:$PATH
