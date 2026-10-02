@@ -221,6 +221,8 @@ rule read_statistics:
         stats = "results/stats/{tech}.stats"
     input:
         reads = "input/{tech}.fastq.gz"
+    container:
+        "docker://quay.io/biocontainers/seqkit:2.14.0--hb192632_0"
     shell:
         r"""
         seqkit stats -a {input.reads} > {output.stats}
@@ -241,7 +243,6 @@ rule hifiadapterfilt:
         "https://depot.galaxyproject.org/singularity/hifiadapterfilt:3.0.0--hdfd78af_0"
     shell:
         r"""
-        #export PATH={params.installdir}/DB:{params.installdir}:$PATH
         mkdir -p pbfilt_temp
         cd pbfilt_temp
         ln -sf {input} ./
@@ -266,7 +267,8 @@ rule count_kmers:
         "input/{tech}.fastq.gz"
     resources:
         ntasks = config["FastK_t"],
-        time = config["FastK_time"]
+        time = config["FastK_time"],
+        mem_mb = config["FastK_m"],
     container:
         "docker://quay.io/biocontainers/fastk:1.2--h71df26d_1"
     params:
