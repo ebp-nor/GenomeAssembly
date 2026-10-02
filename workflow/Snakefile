@@ -265,8 +265,8 @@ rule count_kmers:
         hist = temp("results/pre_assembly/{tech}_reads.histo")
     input:
         "input/{tech}.fastq.gz"
+    threads: config["FastK_t"],
     resources:
-        ntasks = config["FastK_t"],
         time = config["FastK_time"],
         mem_mb = config["FastK_m"],
     container:
@@ -345,10 +345,10 @@ rule assembly_hifiasm:
         unpack(get_reads),
         hicF = hicF,
         hicR = hicR
+    threads: config["hifiasm_threads"],
     resources:
         time = config["hifiasm_cluster_time"],
         mem_per_cpu = config["hifiasm_mem_per_cpu"],
-        ntasks = config["hifiasm_threads"],
         partition = config["hifiasm_partition"]
     params:
         threads = config["hifiasm_threads"],
@@ -388,10 +388,10 @@ rule assembly_hifiasm_nohic:
         hap2 = "results/assembly/assembly.bp.hap2.p_ctg.fa"
     input:
         unpack(get_reads)
+    threads: config["hifiasm_threads"],
     resources:
-        time = config["hifiasm_cluster_time"],
-        mem_per_cpu = config["hifiasm_mem_per_cpu"],
-        ntasks = config["hifiasm_threads"],
+        runtime = config["hifiasm_cluster_time"],
+        mem_mb = config["hifiasm_mem_per_cpu"],
         partition = config["hifiasm_partition"]
     container:
         "containers/hifiasm_hybrid.sif"
@@ -425,10 +425,10 @@ rule assembly_hifiasm_haploid:
         assembly = "results/assembly/assembly.bp.p_ctg.fa"
     input:
         unpack(get_reads)
+    threads: config["hifiasm_threads"],
     resources:
-        time = config["hifiasm_cluster_time"],
-        mem_per_cpu = config["hifiasm_mem_per_cpu"],
-        ntasks = config["hifiasm_threads"],
+        runtime = config["hifiasm_cluster_time"],
+        mem_mb = config["hifiasm_mem_per_cpu"],
         partition = config["hifiasm_partition"]
     params:
         threads = config["hifiasm_threads"],
@@ -462,9 +462,9 @@ rule busco:
     input:
         assembly = "results/{dir}/{assembly}.fa",
         busco = expand("{busco_db_dir}/{lineage}_odb10", busco_db_dir=config["busco_db_dir"], lineage=config["busco_lineage"])
+    threads: config["busco_threads"],
     resources:
-        mem_per_cpu = config["busco_mem"],
-        ntasks = config["busco_threads"]
+        mem_mb = config["busco_mem"],
     params:
         lineage = config["busco_lineage"],
         threads = config["busco_threads"]
@@ -489,12 +489,15 @@ rule create_meryl_db:
         temp(directory("results/scaffolding/meryl/assembly.hic.{hap}.p_ctg.meryl"))
     input:
         "results/assembly/assembly.hic.{hap}.p_ctg.fa"
+    threads: config["meryl_threads"]
     resources:
-        ntasks = config["meryl_threads"]
+        mem_mb = config["meryl_memory"],
     params:
         k = config["meryl_k"],
         t = config["meryl_threads"],
         m = config["meryl_memory"],
+    container:
+        "docker://quay.io/biocontainers/meryl:1.4.2--hd19868c_0"
     shell:
         r"""
         meryl \
@@ -518,8 +521,7 @@ rule meryl_filter:
         hicR = hicR,
         meryl_hap1 = "results/scaffolding/meryl/assembly.hic.hap1.p_ctg.meryl",
         meryl_hap2 = "results/scaffolding/meryl/assembly.hic.hap2.p_ctg.meryl"
-    resources:
-        ntasks = config["meryl_threads"]
+    threads: config["meryl_threads"]
     shell:
         r"""
         meryl difference \
@@ -553,8 +555,8 @@ rule map_hic:
         assembly = "results/assembly/assembly.hic.{hap}.p_ctg.fa",
         hicF = "results/scaffolding/meryl/hicF_{hap}.fastq.gz",
         hicR = "results/scaffolding/meryl/hicR_{hap}.fastq.gz"
-    resources:
-        ntasks = config["yahs_threads"]
+    threads: config["yahs_threads"]
+
     params:
         t = config["yahs_threads"]
     shell:
@@ -576,8 +578,7 @@ rule map_hic_haploid:
         assembly = "results/assembly/assembly.bp.p_ctg.fa",
         hicF = hicF,
         hicR = hicR
-    resources:
-        ntasks = config["yahs_threads"]
+    threads: config["yahs_threads"]
     params:
         t = config["yahs_threads"]
     shell:
@@ -597,8 +598,7 @@ rule prepare_hic:
         markdup = temp("results/scaffolding/{hap}_hic_markdup.sort_n.bam")
     input:
         mapping = "results/scaffolding/{hap}_mapping.bam"
-    resources:
-        ntasks = config["yahs_threads"]
+    threads: config["yahs_threads"]
     params:
         t = config["yahs_threads"]
     shell:
@@ -646,8 +646,8 @@ rule scaffold_hap:
     input:
         assembly = "results/assembly/assembly.hic.{hap}.p_ctg.fa",
         bamfile = "results/scaffolding/{hap}_hic_markdup.sort_n.bam"
+    threads: config["yahs_threads"]
     resources:
-        ntasks = config["yahs_threads"],
         time = config["yahs_cluster_time"],
     shell:
         r"""
@@ -668,6 +668,7 @@ rule scaffold_haploid:
     input:
         assembly = "results/assembly/assembly.bp.p_ctg.fa",
         bamfile = "results/scaffolding/haploid_hic_markdup.sort_n.bam"
+    threads: config["yahs_threads"]
     resources:
         ntasks = config["yahs_threads"],
         time = config["yahs_cluster_time"],
@@ -691,8 +692,8 @@ rule fcs_adaptor:
     input:
         fcs_input
     resources:
-        time = config["fcs_adaptor_time"],
-        mem_per_cpu = config["fcs_adaptor_mem"],
+        runtime = config["fcs_adaptor_time"],
+        mem_mb = config["fcs_adaptor_mem"],
     params:
         fcs_path = config["fcs_path"],
         fcs_image = config["fcs_adaptor_image"]
@@ -717,11 +718,11 @@ rule fcs_gx:
         "results/decontamination/{hap}/{hap}_final.decon.fa"
     input:
         "results/decontamination/{hap}/{hap}_final.clean.fa"
+    threads: config["fcs_threads"]
     resources:
-        time = config["fcs_gx_time"],
-        mem_per_cpu = config["fcs_gx_mem"],
+        runtime = config["fcs_gx_time"],
+        mem_mb = config["fcs_gx_mem"],
         partition = config["fcs_gx_partition"],
-        ntasks = config["fcs_threads"]
     params:
         fcs_path = config["fcs_path"],
         fcs_threads = config["fcs_threads"],
@@ -755,9 +756,9 @@ rule run_oatk_plant:
         "results/organelles/{tech}/oatk.pltd.ctg.fasta"
     input:
         "input/{tech}.fastq.gz"
+    threads: config["oatk_threads"],
     resources:
-        tasks = config["oatk_threads"],
-        mem_per_cpu = config["oatk_mem"]
+        mem_mb = config["oatk_mem"]
     params:
         oatk_install = config["oatk_dir"],
         oatk_db = config["oatk_db"],
@@ -784,9 +785,9 @@ rule run_oatk_nonplant:
         "results/organelles/{tech}/oatk.mito.ctg.fasta"
     input:
         "input/{tech}.fastq.gz"
+    threads: config["oatk_threads"],
     resources:
-        ntasks = config["oatk_threads"],
-        mem_per_cpu = config["oatk_mem"]
+        mem_mb = config["oatk_mem"]
     params:
         oatk_install = config["oatk_dir"],
         oatk_db = config["oatk_db"],
@@ -980,7 +981,7 @@ rule update_pretext:
         | PretextGraph -i {output.pretext} -n "Telomers" \
         || touch {output.pretext}
         """
-
+"""
 #Print software versions to file
 rule print_versions:
     output:
@@ -1004,3 +1005,4 @@ rule print_versions:
         printf "oatk:\t" >> {output}
         {params.oatk_install}/oatk --version >> {output}
         """
+"""
