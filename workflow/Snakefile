@@ -328,8 +328,8 @@ rule smudgeplot:
         t = config["FastK_t"]
     resources:
         time = config["smudge_time"]
-    conda:
-        config["smudgeplot_conda_env"]
+    #conda:
+    #    config["smudgeplot_conda_env"]
     shell:
         r"""
         smudgeplot.py hetmers results/pre_assembly/{wildcards.tech}_reads.kmer.db -L 10 -t {params.t} -o results/pre_assembly/smudgeplot/{wildcards.tech}_smudgeplot_pairs
