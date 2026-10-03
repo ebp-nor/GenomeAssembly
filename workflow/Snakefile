@@ -522,6 +522,8 @@ rule meryl_filter:
         meryl_hap1 = "results/scaffolding/meryl/assembly.hic.hap1.p_ctg.meryl",
         meryl_hap2 = "results/scaffolding/meryl/assembly.hic.hap2.p_ctg.meryl"
     threads: config["meryl_threads"]
+    container:
+        "docker://quay.io/biocontainers/meryl:1.4.2--hd19868c_0"
     shell:
         r"""
         meryl difference \
@@ -558,6 +560,8 @@ rule map_hic:
     threads: config["yahs_threads"]
     params:
         t = config["yahs_threads"],
+    container:
+        "docker://quay.io/biocontainers/bwa:0.7.19--h577a1d6_1"
     shell:
         r"""
         bwa index {input.assembly}
@@ -580,6 +584,8 @@ rule map_hic_haploid:
     threads: config["yahs_threads"]
     params:
         t = config["yahs_threads"]
+    container:
+        "docker://quay.io/biocontainers/bwa:0.7.19--h577a1d6_1"
     shell:
         r"""
         bwa index {input.assembly}
@@ -600,6 +606,8 @@ rule prepare_hic:
     threads: config["yahs_threads"]
     params:
         t = config["yahs_threads"]
+    container:
+        "docker://quay.io/biocontainers/samtools:1.24--h9dcdb79_1"
     shell:
         r"""
         samtools sort \
@@ -648,6 +656,8 @@ rule scaffold_hap:
     threads: config["yahs_threads"]
     resources:
         time = config["yahs_cluster_time"],
+    container:
+        "docker://quay.io/biocontainers/yahs:1.2.2--h577a1d6_1"
     shell:
         r"""
         yahs {input.assembly} {input.bamfile} \
@@ -671,6 +681,8 @@ rule scaffold_haploid:
     resources:
         ntasks = config["yahs_threads"],
         time = config["yahs_cluster_time"],
+    container:
+        "docker://quay.io/biocontainers/yahs:1.2.2--h577a1d6_1"
     shell:
         r"""
         yahs {input.assembly} {input.bamfile} \
@@ -695,13 +707,12 @@ rule fcs_adaptor:
         mem_mb = config["fcs_adaptor_mem"],
     params:
         fcs_path = config["fcs_path"],
-        fcs_image = config["fcs_adaptor_image"]
     container:
         "docker://quay.io/biocontainers/ncbi-fcs-gx:0.5.5--h9948957_0"
     shell:
         r"""
         mkdir -p results/decontamination/{wildcards.hap}/adaptor_output
-        bash {params.fcs_path}/run_fcsadaptor.sh \
+        bash run_fcsadaptor.sh \
             --fasta-input {input} \
             --output-dir results/decontamination/{wildcards.hap}/adaptor_output \
             --euk \
@@ -759,15 +770,16 @@ rule run_oatk_plant:
     resources:
         mem_mb = config["oatk_mem"]
     params:
-        oatk_install = config["oatk_dir"],
         oatk_db = config["oatk_db"],
         lineage = config["oatk_lineage"],
         k = config["oatk_k"],
         c = config["oatk_c"],
         threads = config["oatk_threads"]
+    container:
+        "docker://quay.io/biocontainers/oatk:1.0--h577a1d6_1"
     shell:
         """
-        {params.oatk_install}/oatk \
+        oatk \
             -k {params.k} \
             -c {params.c} \
             -t {params.threads} \
@@ -794,9 +806,11 @@ rule run_oatk_nonplant:
         k = config["oatk_k"],
         c = config["oatk_c"],
         threads = config["oatk_threads"],
+    container:
+        "docker://quay.io/biocontainers/oatk:1.0--h577a1d6_1"
     shell:
         """
-        {params.oatk_install}/oatk \
+        oatk \
             -k {params.k} \
             -c {params.c} \
             -t {params.threads} \
