@@ -554,10 +554,10 @@ rule map_hic:
     input:
         assembly = "results/assembly/assembly.hic.{hap}.p_ctg.fa",
         hicF = "results/scaffolding/meryl/hicF_{hap}.fastq.gz",
-        hicR = "results/scaffolding/meryl/hicR_{hap}.fastq.gz"
+        hicR = "results/scaffolding/meryl/hicR_{hap}.fastq.gz",
     threads: config["yahs_threads"]
     params:
-        t = config["yahs_threads"]
+        t = config["yahs_threads"],
     shell:
         r"""
         bwa index {input.assembly}
