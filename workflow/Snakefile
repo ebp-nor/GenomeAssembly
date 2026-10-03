@@ -655,7 +655,7 @@ rule scaffold_hap:
         bamfile = "results/scaffolding/{hap}_hic_markdup.sort_n.bam"
     threads: config["yahs_threads"]
     resources:
-        time = config["yahs_cluster_time"],
+        runtime = config["yahs_cluster_time"],
     container:
         "docker://quay.io/biocontainers/yahs:1.2.2--h577a1d6_1"
     shell:
@@ -994,28 +994,27 @@ rule update_pretext:
         | PretextGraph -i {output.pretext} -n "Telomers" \
         || touch {output.pretext}
         """
-"""
+
 #Print software versions to file
-rule print_versions:
-    output:
-        "software_versions.txt"
-    params:
-        hifiadapterfilt = config["adapterfilt_install_dir"],
-        fcs_path = config["fcs_path"],
-        oatk_install = config["oatk_dir"]
-    shell:
-        r"""
-        printf "Conda software versions:\n" > {output}
-        conda list -e | grep -v "^#" >> {output}
-        printf "\nOther software versions:\n" >> {output}
-        printf "\nHiFi Adapterfilt version:\t" >> {output}
-        bash {params.hifiadapterfilt}/hifiadapterfilt.sh --version >> {output}
-        printf "\nNCBI FCS versions:\n" >> {output}
-        printf "fcsadaptor:\t" >> {output}
-        cat {params.fcs_path}/run_fcsadaptor.sh | grep "^DEFAULT_VERSION" >> {output}
-        printf "fcs.py:\t" >> {output}
-        cat {params.fcs_path}/fcs.py | grep "^DEFAULT_VERSION" >> {output}
-        printf "oatk:\t" >> {output}
-        {params.oatk_install}/oatk --version >> {output}
-        """
-"""
+#rule print_versions:
+#    output:
+#        "software_versions.txt"
+#    params:
+#        hifiadapterfilt = config["adapterfilt_install_dir"],
+#        fcs_path = config["fcs_path"],
+#        oatk_install = config["oatk_dir"]
+#    shell:
+#        r"""
+#        printf "Conda software versions:\n" > {output}
+#        conda list -e | grep -v "^#" >> {output}
+#        printf "\nOther software versions:\n" >> {output}
+#        printf "\nHiFi Adapterfilt version:\t" >> {output}
+#        bash {params.hifiadapterfilt}/hifiadapterfilt.sh --version >> {output}
+#        printf "\nNCBI FCS versions:\n" >> {output}
+#        printf "fcsadaptor:\t" >> {output}
+#        cat {params.fcs_path}/run_fcsadaptor.sh | grep "^DEFAULT_VERSION" >> {output}
+#        printf "fcs.py:\t" >> {output}
+#        cat {params.fcs_path}/fcs.py | grep "^DEFAULT_VERSION" >> {output}
+#        printf "oatk:\t" >> {output}
+#        {params.oatk_install}/oatk --version >> {output}
+#        """
