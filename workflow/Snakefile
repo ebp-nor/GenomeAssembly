@@ -8,6 +8,7 @@ ont = config["ont"]
 #are the ONT reads R10, then maybe do assembly based on those instead of HiFi
 r10 = config["r10"]
 
+#move the below into a rule
 print()
 shell(f"mkdir -p input")
 if pacbio:
@@ -166,7 +167,7 @@ def curation_out(wildcards):
         return("software_versions.txt")
 
 #Define rules that do not need to be submitted to the cluster
-localrules: read_statistics, concat_scaff, update_pretext, print_versions
+localrules: read_statistics, concat_scaff, update_pretext
 
 #Summary rule to run full pipeline (pre-assembly, assembly, scaffolding)
 rule all:
@@ -178,7 +179,6 @@ rule all:
         oatk_isPlant(),
         read_stats,
         curation_out,
-        "software_versions.txt"
 
 #Summary rule to run the full pipeline, but without curation
 rule all_nocuration:
@@ -188,28 +188,25 @@ rule all_nocuration:
         assembly_out,
         expand("results/decontamination/{hap}/busco_{hap}_final.decon_{lineage}", lineage=config["busco_lineage"], hap=HAPS),
         oatk_isPlant(),
-        read_stats,
-        "software_versions.txt"
+        read_stats
 
 #Summary rule to run all pre-assembly steps
 rule pre_assembly:
     input:
         genomescope_out,
         smudgeplot_out,
-        "software_versions.txt"
+
 
 #General rule for running only primary assembly and busco
 rule assembly:
     input:
         assembly_out,
-        "software_versions.txt"
 
 #General rule for generationg a decontaminated assembly, but without running busco
 rule decontamination:
     input:
         assembly_out,
         expand("results/decontamination/{hap}/busco_{hap}_final.decon_{lineage}", lineage=config["busco_lineage"], hap=HAPS),
-        "software_versions.txt"
 
 #Rule for creating organelle assembly only
 rule organelles:
@@ -348,8 +345,8 @@ rule assembly_hifiasm:
     threads: config["hifiasm_threads"],
     resources:
         time = config["hifiasm_cluster_time"],
-        mem_per_cpu = config["hifiasm_mem_per_cpu"],
-        partition = config["hifiasm_partition"]
+        mem_mb = config["hifiasm_mem_per_cpu"]*config["hifiasm_threads"],
+        slurm_partition = config["hifiasm_partition"]
     params:
         threads = config["hifiasm_threads"],
         mode = hifiasm_mode,
@@ -391,8 +388,8 @@ rule assembly_hifiasm_nohic:
     threads: config["hifiasm_threads"],
     resources:
         runtime = config["hifiasm_cluster_time"],
-        mem_mb = config["hifiasm_mem_per_cpu"],
-        partition = config["hifiasm_partition"]
+        mem_mb = config["hifiasm_mem_per_cpu"]*config["hifiasm_threads"],
+        slurm_partition = config["hifiasm_partition"]
     container:
         "containers/hifiasm_hybrid.sif"
     params:
@@ -428,8 +425,8 @@ rule assembly_hifiasm_haploid:
     threads: config["hifiasm_threads"],
     resources:
         runtime = config["hifiasm_cluster_time"],
-        mem_mb = config["hifiasm_mem_per_cpu"],
-        partition = config["hifiasm_partition"]
+        mem_mb = config["hifiasm_mem_per_cpu"]*config["hifiasm_threads"],
+        slurm_partition = config["hifiasm_partition"]
     params:
         threads = config["hifiasm_threads"],
         mode = hifiasm_mode,
@@ -732,7 +729,7 @@ rule fcs_gx:
     resources:
         runtime = config["fcs_gx_time"],
         mem_mb = config["fcs_gx_mem"],
-        partition = config["fcs_gx_partition"],
+        slurm_partition = config["fcs_gx_partition"],
     params:
         fcs_path = config["fcs_path"],
         fcs_threads = config["fcs_threads"],
@@ -821,6 +818,7 @@ rule run_oatk_nonplant:
         || touch {output}
         """
 
+#maybe change this also
 rule concat_scaff:
     output:
         "results/curation/data/ref.fa"
