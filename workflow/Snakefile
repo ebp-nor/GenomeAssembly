@@ -264,7 +264,7 @@ rule count_kmers:
         "input/{tech}.fastq.gz"
     threads: config["FastK_t"],
     resources:
-        time = config["FastK_time"],
+        runtime = config["FastK_time"],
         mem_mb = config["FastK_m"],
     container:
         "docker://quay.io/biocontainers/fastk:1.2--h71df26d_1"
@@ -295,7 +295,7 @@ rule genomescope:
     input:
         rules.count_kmers.output.hist
     resources:
-        time = config["GS_time"]
+        runtime = config["GS_time"]
     params:
         ploidy_range = config["GS_ploidy_range"],
         k = config["FastK_k"]
@@ -324,7 +324,7 @@ rule smudgeplot:
     params:
         t = config["FastK_t"]
     resources:
-        time = config["smudge_time"]
+        runtime = config["smudge_time"]
     #conda:
     #    config["smudgeplot_conda_env"]
     shell:
@@ -344,7 +344,7 @@ rule assembly_hifiasm:
         hicR = hicR
     threads: config["hifiasm_threads"],
     resources:
-        time = config["hifiasm_cluster_time"],
+        runtime = config["hifiasm_cluster_time"],
         mem_mb = config["hifiasm_mem_per_cpu"]*config["hifiasm_threads"],
         slurm_partition = config["hifiasm_partition"]
     params:
