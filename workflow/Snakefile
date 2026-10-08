@@ -295,7 +295,7 @@ rule genomescope:
     input:
         rules.count_kmers.output.hist
     resources:
-        runtime = config["GS_time"]
+        runtime = config["GS_time"],
         mem_mb = config["GS_mem"],
     params:
         ploidy_range = config["GS_ploidy_range"],
