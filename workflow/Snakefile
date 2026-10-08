@@ -296,6 +296,7 @@ rule genomescope:
         rules.count_kmers.output.hist
     resources:
         runtime = config["GS_time"]
+        mem_mb = config["GS_mem"],
     params:
         ploidy_range = config["GS_ploidy_range"],
         k = config["FastK_k"]
@@ -324,7 +325,8 @@ rule smudgeplot:
     params:
         t = config["FastK_t"]
     resources:
-        runtime = config["smudge_time"]
+        runtime = config["smudge_time"],
+        mem_mb = config["smudge_mem"],
     #conda:
     #    config["smudgeplot_conda_env"]
     shell:
