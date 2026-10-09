@@ -522,6 +522,7 @@ rule meryl_filter:
         meryl_hap2 = "results/scaffolding/meryl/assembly.hic.hap2.p_ctg.meryl"
     threads: config["meryl_threads"]
     resources:
+        runtime = config["meryl_time"],
         mem_mb = config["meryl_memory"],
     container:
         "docker://quay.io/biocontainers/meryl:1.4.2--hd19868c_0"
