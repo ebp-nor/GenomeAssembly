@@ -460,7 +460,7 @@ rule busco:
         directory(expand("results/{{dir}}/busco_{{assembly}}_{lineage}", lineage=config["busco_lineage"]))
     input:
         assembly = "results/{dir}/{assembly}.fa",
-        busco = expand("{busco_db_dir}/{lineage}_odb10", busco_db_dir=config["busco_db_dir"], lineage=config["busco_lineage"])
+        busco = expand("{busco_db_dir}/{lineage}_{version}", busco_db_dir=config["busco_db_dir"], lineage=config["busco_lineage"], version=config["busco_db_version"])
     threads: config["busco_threads"],
     resources:
         mem_mb = config["busco_mem"],
@@ -477,6 +477,7 @@ rule busco:
             -c {params.threads} \
             -m genome \
             --offline \
+            --tar \
             --out_path results/{wildcards.dir} \
             -o busco_{wildcards.assembly}_{params.lineage} \
             --download_path /tmp
