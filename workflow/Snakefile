@@ -457,7 +457,7 @@ rule assembly_hifiasm_haploid:
 #Run busco on assembly
 rule busco:
     output:
-        directory(expand("results/{{dir}}/busco_{{assembly}}_{lineage}", lineage=config["busco_lineage"]))
+        directory(expand("results/{{dir}}/busco_{{assembly}}_odb{lineage}", lineage=config["busco_lineage"]))
     input:
         assembly = "results/{dir}/{assembly}.fa",
         busco = expand("{busco_db_dir}/{lineage}_{version}", busco_db_dir=config["busco_db_dir"], lineage=config["busco_lineage"], version=config["busco_db_version"])
