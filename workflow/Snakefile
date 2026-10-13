@@ -554,7 +554,7 @@ rule meryl_filter:
 #Prepare filtered Hi-C reads for scaffolding
 rule map_hic:
     output:
-        mapping = temp("results/scaffolding/{hap}_mapping.bam")
+        mapping = pipe("results/scaffolding/{hap}_mapping.sam")
     input:
         assembly = "results/assembly/assembly.hic.{hap}.p_ctg.fa",
         hicF = "results/scaffolding/meryl/hicF_{hap}.fastq.gz",
@@ -565,20 +565,19 @@ rule map_hic:
     params:
         t = config["yahs_threads"],
     container:
-        "docker://quay.io/repository/sangerpathogens/minibwa-samtools:0.7-1.23"
+        "docker://quay.io/repository/biocontainers/minibwa:0.7--h118bc1c_0"
     shell:
         r"""
         minibwa index {input.assembly}
-        samtools faidx {input.assembly}
         minibwa map --hic \
             -t {params.t} \
             {input.assembly} {input.hicF} {input.hicR} \
-        | samtools view -bu - > {output.mapping}
+         > {output.mapping}
         """
 
 rule map_hic_haploid:
     output:
-        mapping = temp("results/scaffolding/haploid_mapping.bam")
+        mapping = pipe("results/scaffolding/haploid_mapping.sam")
     input:
         assembly = "results/assembly/assembly.bp.p_ctg.fa",
         hicF = hicF,
@@ -589,16 +588,35 @@ rule map_hic_haploid:
     params:
         t = config["yahs_threads"],
     container:
-        "docker://quay.io/repository/sangerpathogens/minibwa-samtools:0.7-1.23"
+        "docker://quay.io/repository/biocontainers/minibwa:0.7--h118bc1c_0"
     shell:
         r"""
         minibwa index {input.assembly}
-        samtools faidx {input.assembly}
         minibwa map --hic \
             -t {params.t} \
             {input.assembly} {input.hicF} {input.hicR} \
-        | samtools view -bu - > {output.mapping}
+            > {output.mapping}
         """
+
+rule samtools_bam:
+    input:
+        sam = "results/scaffolding/{hap}_mapping.sam"
+    output:
+        bam = "results/scaffolding/{hap}_mapping.bam"
+    container:
+        "docker://quay.io/biocontainers/samtools:1.24--h9dcdb79_1"
+    shell:
+        "samtools view -b -o {output.bam} {input.sam}"
+
+rule samtools_bam_haploid:
+    input:
+        sam = "results/scaffolding/haploid_mapping.sam"
+    output:
+        bam = "results/scaffolding/haploid_mapping.bam"
+    container:
+        "docker://quay.io/biocontainers/samtools:1.24--h9dcdb79_1"
+    shell:
+        "samtools view -b -o {output.bam} {input.sam}"
 
 rule prepare_hic:
     output:
