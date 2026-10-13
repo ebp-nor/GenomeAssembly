@@ -560,18 +560,18 @@ rule map_hic:
         hicF = "results/scaffolding/meryl/hicF_{hap}.fastq.gz",
         hicR = "results/scaffolding/meryl/hicR_{hap}.fastq.gz",
     threads: config["yahs_threads"]
+    resources:
+        runtime = config["yahs_cluster_time"],
     params:
         t = config["yahs_threads"],
     container:
-        "docker://quay.io/biocontainers/bwa:0.7.19--h577a1d6_1"
+        "docker://quay.io/repository/sangerpathogens/minibwa-samtools:0.7-1.23"
     shell:
         r"""
-        bwa index {input.assembly}
+        minibwa index {input.assembly}
         samtools faidx {input.assembly}
-        bwa mem \
+        minibwa map --hic \
             -t {params.t} \
-            -R '@RG\tSM:{wildcards.hap}\tID:{wildcards.hap}' \
-            -5SPM \
             {input.assembly} {input.hicF} {input.hicR} \
         | samtools view -bu - > {output.mapping}
         """
@@ -584,19 +584,19 @@ rule map_hic_haploid:
         hicF = hicF,
         hicR = hicR
     threads: config["yahs_threads"]
+    resources:
+        runtime = config["yahs_cluster_time"],
     params:
-        t = config["yahs_threads"]
+        t = config["yahs_threads"],
     container:
-        "docker://quay.io/biocontainers/bwa:0.7.19--h577a1d6_1"
+        "docker://quay.io/repository/sangerpathogens/minibwa-samtools:0.7-1.23"
     shell:
         r"""
-        bwa index {input.assembly}
+        minibwa index {input.assembly}
         samtools faidx {input.assembly}
-        bwa mem \
-         -t {params.t} \
-         -R '@RG\tSM:haploid\tID:haploid' \
-         -5SPM \
-         {input.assembly} {input.hicF} {input.hicR} \
+        minibwa map --hic \
+            -t {params.t} \
+            {input.assembly} {input.hicF} {input.hicR} \
         | samtools view -bu - > {output.mapping}
         """
 
