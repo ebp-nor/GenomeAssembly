@@ -118,22 +118,22 @@ def prio_reads(wildcards):
 def assembly_out(wildcards):
     output = []
     if config["haploid"]:
-        output.append("results/assembly/busco_assembly.bp.p_ctg_"+config["busco_lineage"])
+        output.append("results/assembly/busco_assembly.bp.p_ctg_odb"+config["busco_lineage"])
         if hicF and hicR:
-            output.append("results/scaffolding/busco_haploid_scaffolds_final_"+config["busco_lineage"])
+            output.append("results/scaffolding/busco_haploid_scaffolds_final_odb"+config["busco_lineage"])
     elif hicF and hicR:
-        output.extend(expand("results/assembly/busco_assembly.hic.{hap}.p_ctg_{lineage}", lineage=config["busco_lineage"], hap=HAPS))
-        output.extend(expand("results/scaffolding/busco_{hap}_scaffolds_final_{lineage}", lineage=config["busco_lineage"], hap=HAPS))
+        output.extend(expand("results/assembly/busco_assembly.hic.{hap}.p_ctg_odb{lineage}", lineage=config["busco_lineage"], hap=HAPS))
+        output.extend(expand("results/scaffolding/busco_{hap}_scaffolds_final_odb{lineage}", lineage=config["busco_lineage"], hap=HAPS))
     else:
-        output.extend(expand("results/assembly/busco_assembly.bp.{hap}.p_ctg_{lineage}", lineage=config["busco_lineage"], hap=HAPS))
+        output.extend(expand("results/assembly/busco_assembly.bp.{hap}.p_ctg_odb{lineage}", lineage=config["busco_lineage"], hap=HAPS))
     return(output)
 
 def decontam_out(wildcards):
     output = []
     if config["haploid"]:
-        output.append("results/decontamination/haploid/busco_haploid_final.decon_"+config["busco_lineage"])
+        output.append("results/decontamination/haploid/busco_haploid_final.decon_odb"+config["busco_lineage"])
     else:
-        output.extend(expand("results/decontamination/{hap}/busco_{hap}_final.decon_{lineage}", lineage=config["busco_lineage"], hap=HAPS))
+        output.extend(expand("results/decontamination/{hap}/busco_{hap}_final.decon_odb{lineage}", lineage=config["busco_lineage"], hap=HAPS))
     return(output)
 
 def fcs_input(wildcards):
@@ -186,7 +186,7 @@ rule all_nocuration:
         genomescope_out,
         smudgeplot_out,
         assembly_out,
-        expand("results/decontamination/{hap}/busco_{hap}_final.decon_{lineage}", lineage=config["busco_lineage"], hap=HAPS),
+        expand("results/decontamination/{hap}/busco_{hap}_final.decon_odb{lineage}", lineage=config["busco_lineage"], hap=HAPS),
         oatk_isPlant(),
         read_stats
 
@@ -206,7 +206,7 @@ rule assembly:
 rule decontamination:
     input:
         assembly_out,
-        expand("results/decontamination/{hap}/busco_{hap}_final.decon_{lineage}", lineage=config["busco_lineage"], hap=HAPS),
+        expand("results/decontamination/{hap}/busco_{hap}_final.decon_odb{lineage}", lineage=config["busco_lineage"], hap=HAPS),
 
 #Rule for creating organelle assembly only
 rule organelles:
