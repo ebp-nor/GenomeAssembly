@@ -235,7 +235,6 @@ rule hifiadapterfilt:
         ntasks = config["adapterfilt_threads"]
     params:
         threads = config["adapterfilt_threads"],
-        installdir = config["adapterfilt_install_dir"]
     container:
         "https://depot.galaxyproject.org/singularity/hifiadapterfilt:3.0.0--hdfd78af_0"
     shell:
