@@ -565,7 +565,7 @@ rule map_hic:
     params:
         t = config["yahs_threads"],
     container:
-        "docker://quay.io/repository/biocontainers/minibwa:0.7--h118bc1c_0"
+        "docker://quay.io/biocontainers/minibwa:0.7--h118bc1c_0"
     shell:
         r"""
         minibwa index {input.assembly}
@@ -588,7 +588,7 @@ rule map_hic_haploid:
     params:
         t = config["yahs_threads"],
     container:
-        "docker://quay.io/repository/biocontainers/minibwa:0.7--h118bc1c_0"
+        "docker://quay.io/biocontainers/minibwa:0.7--h118bc1c_0"
     shell:
         r"""
         minibwa index {input.assembly}
