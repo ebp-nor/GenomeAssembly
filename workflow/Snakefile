@@ -281,7 +281,7 @@ rule count_kmers:
          -P{wildcards.tech}_fastk_temp \
          {input} \
          -Nresults/pre_assembly/{wildcards.tech}_reads.kmer.db
-        Histex -G {wildcards.tech}_reads.kmer.db \
+        Histex -G results/pre_assembly/{wildcards.tech}_reads.kmer.db \
          > {output.hist}
         rm -r {wildcards.tech}_fastk_temp
         """
