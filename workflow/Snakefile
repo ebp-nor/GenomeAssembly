@@ -807,8 +807,7 @@ rule run_oatk_plant:
             -m {params.oatk_db}/{params.lineage}_mito.fam \
             -p {params.oatk_db}/{params.lineage}_pltd.fam \
             -o results/organelles/{wildcards.tech}/oatk \
-            {input} \
-        || touch {output}
+            {input}
         """
 
 rule run_oatk_nonplant:
@@ -837,8 +836,7 @@ rule run_oatk_nonplant:
             --nhmmscan nhmmscan \
             -m {params.oatk_db}/{params.lineage}_mito.fam \
             -o results/organelles/{wildcards.tech}/oatk \
-            {input} \
-        || touch {output}
+            {input}
         """
 
 #maybe change this also
