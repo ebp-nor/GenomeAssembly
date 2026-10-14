@@ -256,9 +256,9 @@ rule hifiadapterfilt:
 #Count k-mers for genomescope and smudgeplot
 rule count_kmers:
     output:
-        db_ktab = temp("results/pre_assembly/{tech}_reads.kmer.db.ktab"),
-        db_hist = temp("results/pre_assembly/{tech}_reads.kmer.db.hist"),
-        hist = temp("results/pre_assembly/{tech}_reads.histo")
+        db_ktab = "results/pre_assembly/{tech}_reads.kmer.db.ktab",
+        db_hist = "results/pre_assembly/{tech}_reads.kmer.db.hist",
+        hist = "results/pre_assembly/{tech}_reads.histo",
     input:
         "input/{tech}.fastq.gz"
     threads: config["FastK_t"],
@@ -280,10 +280,9 @@ rule count_kmers:
          -M{params.m} \
          -P{wildcards.tech}_fastk_temp \
          {input} \
-         -N{wildcards.tech}_reads.kmer.db
+         -Nresults/pre_assembly/{wildcards.tech}_reads.kmer.db
         Histex -G {wildcards.tech}_reads.kmer.db \
          > {output.hist}
-        mv {wildcards.tech}_reads.kmer.db* .{wildcards.tech}_reads.kmer.db* results/pre_assembly/
         rm -r {wildcards.tech}_fastk_temp
         """
 
@@ -292,7 +291,8 @@ rule genomescope:
     output:
         "results/pre_assembly/genomescope/{tech}_genomescope_ploidy{ploidy}.out"
     input:
-        rules.count_kmers.output.hist
+        #rules.count_kmers.output.hist
+        histo = "results/pre_assembly/{tech}_reads.histo",
     resources:
         runtime = config["GS_time"],
         mem_mb = config["GS_mem"],
@@ -304,7 +304,7 @@ rule genomescope:
     shell:
         r"""
         genomescope2 \
-         -i {input} \
+         -i {input.histo} \
          -o results/pre_assembly/genomescope/{wildcards.tech}_ploidy{wildcards.ploidy} \
          -k {params.k} \
          -p {wildcards.ploidy} \
@@ -317,8 +317,8 @@ rule smudgeplot:
     output:
         "results/pre_assembly/smudgeplot/{tech}_smudgeplot.pdf"
     input:
-        db_ktab = rules.count_kmers.output.db_ktab,
-        db_hist = rules.count_kmers.output.db_hist
+        db_ktab = "results/pre_assembly/{tech}_reads.kmer.db.ktab",
+        db_hist = "results/pre_assembly/{tech}_reads.kmer.db.hist"
     container:
         "docker://quay.io/biocontainers/smudgeplot:0.5.3--py314h577a1d6_0"
     params:
@@ -326,8 +326,6 @@ rule smudgeplot:
     resources:
         runtime = config["smudge_time"],
         mem_mb = config["smudge_mem"],
-    #conda:
-    #    config["smudgeplot_conda_env"]
     shell:
         r"""
         smudgeplot.py hetmers results/pre_assembly/{wildcards.tech}_reads.kmer.db -L 10 -t {params.t} -o results/pre_assembly/smudgeplot/{wildcards.tech}_smudgeplot_pairs
