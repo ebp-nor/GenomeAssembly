@@ -622,6 +622,9 @@ rule prepare_hic:
     input:
         mapping = "results/scaffolding/{hap}_mapping.bam"
     threads: config["yahs_threads"]
+    resources:
+        runtime = config["yahs_cluster_time"],
+        mem_mb = config["yahs_memory"],
     params:
         t = config["yahs_threads"]
     container:
@@ -674,6 +677,7 @@ rule scaffold_hap:
     threads: config["yahs_threads"]
     resources:
         runtime = config["yahs_cluster_time"],
+        mem_mb = config["yahs_memory"],
     container:
         "docker://quay.io/biocontainers/yahs:1.2.2--h577a1d6_1"
     shell:
@@ -697,8 +701,8 @@ rule scaffold_haploid:
         bamfile = "results/scaffolding/haploid_hic_markdup.sort_n.bam"
     threads: config["yahs_threads"]
     resources:
-        ntasks = config["yahs_threads"],
-        time = config["yahs_cluster_time"],
+        runtime = config["yahs_cluster_time"],
+        mem_mb = config["yahs_memory"],
     container:
         "docker://quay.io/biocontainers/yahs:1.2.2--h577a1d6_1"
     shell:
