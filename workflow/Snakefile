@@ -94,7 +94,7 @@ def hifiasm_mode(wildcards):
         return("--ont ont.fastq.gz")
     elif config["ont"] and config["pacbio"]:
         ont = config["ont"].split("/")[-1]
-        return(f"--ont ont.fastq.gz --hf pacbio.filt.fastq.gz --hyb-syn config["hybrid_mode"]")
+        return("--ont ont.fastq.gz --hf pacbio.filt.fastq.gz --hyb-syn " + config["hybrid_mode"])
     elif config["pacbio"] and not config["ont"]:
         return("pacbio.filt.fastq.gz")
 
