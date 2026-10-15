@@ -5,8 +5,6 @@ hicR = config["hicR"]
 HAPS = ["hap1", "hap2"]
 #Check if ONT reads are defined
 ont = config["ont"]
-#are the ONT reads R10, then maybe do assembly based on those instead of HiFi
-r10 = config["r10"]
 
 #move the below into a rule
 print()
@@ -76,7 +74,7 @@ def get_reads(wildcards):
 def asm_reads(wildcards):
     if config["pacbio"] and not config["ont"]:
         return(rules.hifiadapterfilt.output.pacbioFilt)
-    elif config["pacbio"] and config["r10"]:
+    elif config["pacbio"]:
         return(ont)
     else:
         return([rules.hifiadapterfilt.output.pacbioFilt, config["ont"]])
@@ -107,7 +105,7 @@ def minimap_mode(wildcards):
         return("map-ont")
 
 def prio_reads(wildcards):
-    if config["pacbio"] and not config["r10"]:
+    if config["pacbio"]:
         return("input/pacbio.fastq.gz")
     else:
         return("input/ont.fastq.gz")
