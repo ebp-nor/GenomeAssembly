@@ -85,22 +85,19 @@ def gen_linkread_cmd(wildcards):
     cmd = ""
     if config["ont"]:
         cmd += f"ln -sf ../input/ont.fastq.gz ./ont.fastq.gz\n"
-    if config["pacbio"] and not config["ont"]:
+    if config["pacbio"]:
         cmd += f"ln -sf ../{rules.hifiadapterfilt.output.pacbioFilt} ./pacbio.filt.fastq.gz\n"
-        return(cmd)
-    if config["pacbio"] and not config["r10"]:
-        cmd += f"ln -sf ../{rules.hifiadapterfilt.output.pacbioFilt} ./pacbio.filt.fastq.gz\n"
-        return(cmd)
     return(cmd)
 
 def hifiasm_mode(wildcards):
-    if config["ont"] and config["r10"]:
+    #ignore ont mode from now on
+    if config["ont"] and not config["pacbio"]:
         ont = config["ont"].split("/")[-1]
         return("--ont ont.fastq.gz")
     elif config["ont"] and config["pacbio"]:
         ont = config["ont"].split("/")[-1]
-        return("--ul ont.fastq.gz pacbio.filt.fastq.gz")
-    elif config["pacbio"]:
+        return("--ont ont.fastq.gz --hf pacbio.filt.fastq.gz --hyb-syn config["hybrid_mode"]")
+    elif config["pacbio"] and not config["ont"]:
         return("pacbio.filt.fastq.gz")
 
 def minimap_mode(wildcards):
@@ -336,7 +333,8 @@ rule smudgeplot:
 rule assembly_hifiasm:
     output:
         hap1 = "results/assembly/assembly.hic.hap1.p_ctg.fa",
-        hap2 = "results/assembly/assembly.hic.hap2.p_ctg.fa"
+        hap2 = "results/assembly/assembly.hic.hap2.p_ctg.fa",
+        primary = "results/assembly/assembly.hic.p_ctg.gfa"
     input:
         unpack(get_reads),
         hicF = hicF,
@@ -366,12 +364,15 @@ rule assembly_hifiasm:
             -t{params.threads} \
             --h1 hicF.fastq.gz \
             --h2 hicR.fastq.gz \
+            --write-ec \
             {params.mode}
         mv assembly.* $CWD/results/assembly
         awk '/^S/{{print ">"$2"\n"$3}}' $CWD/results/assembly/assembly.hic.hap1.p_ctg.gfa \
             | fold > $CWD/{output.hap1}
         awk '/^S/{{print ">"$2"\n"$3}}' $CWD/results/assembly/assembly.hic.hap2.p_ctg.gfa \
             | fold > $CWD/{output.hap2}
+        awk '/^S/{{print ">"$2"\n"$3}}' $CWD/results/assembly/assembly.hic.p_ctg.gfa \
+            | fold > $CWD/{output.primary}
         cd $CWD && rm -r assembly_tmp
         if [ -f {output.hap1} ]; then
             rm results/assembly/*bin
@@ -381,7 +382,8 @@ rule assembly_hifiasm:
 rule assembly_hifiasm_nohic:
     output:
         hap1 = "results/assembly/assembly.bp.hap1.p_ctg.fa",
-        hap2 = "results/assembly/assembly.bp.hap2.p_ctg.fa"
+        hap2 = "results/assembly/assembly.bp.hap2.p_ctg.fa",
+        primary = "results/assembly/assembly.bp.p_ctg.fa"
     input:
         unpack(get_reads)
     threads: config["hifiasm_threads"],
@@ -404,12 +406,15 @@ rule assembly_hifiasm_nohic:
             -o assembly \
             --dual-scaf \
             -t{params.threads} \
+            --write-ec \
             {params.mode}
         mv assembly.* ../results/assembly
         awk '/^S/{{print ">"$2"\n"$3}}' ../results/assembly/assembly.bp.hap1.p_ctg.gfa \
             | fold > ../{output.hap1}
         awk '/^S/{{print ">"$2"\n"$3}}' ../results/assembly/assembly.bp.hap2.p_ctg.gfa \
             | fold > ../{output.hap2}
+        awk '/^S/{{print ">"$2"\n"$3}}' $CWD/results/assembly/assembly.bp.p_ctg.gfa \
+            | fold > $CWD/{output.primary}
         cd .. && rm -r assembly_tmp
         if [ -f {output.hap1} ]; then
             rm results/assembly/*bin
@@ -441,6 +446,7 @@ rule assembly_hifiasm_haploid:
             -l0 \
             -o assembly \
             -t{params.threads} \
+            --write-ec \
             {params.mode}
         mv assembly.* ../results/assembly
         awk '/^S/{{print ">"$2"\n"$3}}' ../results/assembly/assembly.bp.p_ctg.gfa \
