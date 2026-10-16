@@ -171,9 +171,9 @@ rule all:
         smudgeplot_out,
         assembly_out,
         decontam_out,
-        oatk_isPlant(),
         read_stats,
         curation_out,
+        #oatk_isPlant(),
 
 #Summary rule to run the full pipeline, but without curation
 rule all_nocuration:
@@ -182,8 +182,8 @@ rule all_nocuration:
         smudgeplot_out,
         assembly_out,
         expand("results/decontamination/{hap}/busco_{hap}_final.decon_odb{lineage}", lineage=config["busco_lineage"], hap=HAPS),
-        oatk_isPlant(),
-        read_stats
+        read_stats,
+        #oatk_isPlant(),
 
 #Summary rule to run all pre-assembly steps
 rule pre_assembly:
