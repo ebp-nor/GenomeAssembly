@@ -323,8 +323,8 @@ rule smudgeplot:
         mem_mb = config["smudge_mem"],
     shell:
         r"""
-        smudgeplot.py hetmers results/pre_assembly/{wildcards.tech}_reads.kmer.db -L 10 -t {params.t} -o results/pre_assembly/smudgeplot/{wildcards.tech}_smudgeplot_pairs
-        smudgeplot.py all results/pre_assembly/smudgeplot/{wildcards.tech}_smudgeplot_pairs_text.smu -o results/pre_assembly/smudgeplot/{wildcards.tech}
+        smudgeplot hetmers results/pre_assembly/{wildcards.tech}_reads.kmer.db -L 10 -t {params.t} -o results/pre_assembly/smudgeplot/{wildcards.tech}_smudgeplot_pairs
+        smudgeplot all results/pre_assembly/smudgeplot/{wildcards.tech}_smudgeplot_pairs_text.smu -o results/pre_assembly/smudgeplot/{wildcards.tech}
         """
 
 #Perform genome assembly with hifiasm using pacbio reads and hic reads
