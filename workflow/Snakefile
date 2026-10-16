@@ -66,25 +66,28 @@ def read_stats(wildcards):
 def get_reads(wildcards):
     output = {}
     if config["pacbio"]:
-        output["hifi"] = rules.hifiadapterfilt.output.pacbioFilt
+        output["hifi"] = config["pacbio"]
+        #output["hifi"] = rules.hifiadapterfilt.output.pacbioFilt
     if config["ont"]:
         output["ont"] = config["ont"]
     return(output)
 
-def asm_reads(wildcards):
-    if config["pacbio"] and not config["ont"]:
-        return(rules.hifiadapterfilt.output.pacbioFilt)
-    elif config["pacbio"]:
-        return(ont)
-    else:
-        return([rules.hifiadapterfilt.output.pacbioFilt, config["ont"]])
+#def asm_reads(wildcards):
+#    if config["pacbio"] and not config["ont"]:
+#        return
+#        #return(rules.hifiadapterfilt.output.pacbioFilt)
+#    elif config["pacbio"]:
+#        return(ont)
+#    else:
+#        return([rules.hifiadapterfilt.output.pacbioFilt, config["ont"]])
 
 def gen_linkread_cmd(wildcards):
     cmd = ""
     if config["ont"]:
         cmd += f"ln -sf ../input/ont.fastq.gz ./ont.fastq.gz\n"
     if config["pacbio"]:
-        cmd += f"ln -sf ../{rules.hifiadapterfilt.output.pacbioFilt} ./pacbio.filt.fastq.gz\n"
+        #cmd += f"ln -sf ../{rules.hifiadapterfilt.output.pacbioFilt} ./pacbio.filt.fastq.gz\n"
+        cmd += f"ln -sf ../input/pacbio.fastq.gz ./pacbio.fastq.gz\n"
     return(cmd)
 
 def hifiasm_mode(wildcards):
@@ -94,9 +97,9 @@ def hifiasm_mode(wildcards):
         return("--ont ont.fastq.gz")
     elif config["ont"] and config["pacbio"]:
         ont = config["ont"].split("/")[-1]
-        return("--ont ont.fastq.gz --hf pacbio.filt.fastq.gz --hyb-syn " + str(config["hybrid_mode"]))
+        return("--ont ont.fastq.gz --hf pacbio.fastq.gz --hyb-syn " + str(config["hybrid_mode"]))
     elif config["pacbio"] and not config["ont"]:
-        return("pacbio.filt.fastq.gz")
+        return("pacbio.fastq.gz")
 
 def minimap_mode(wildcards):
     if pacbio:
@@ -220,7 +223,7 @@ rule read_statistics:
         seqkit stats -a {input.reads} > {output.stats}
         """
 
-#Filter PacBio HiFi reads
+#Filter PacBio HiFi reads. Not using anymore. FCS adapter can deal with this. The linked singularity image had errors.
 rule hifiadapterfilt:
     output:
         pacbioFilt = "results/pacbio/pacbio.filt.fastq.gz"
