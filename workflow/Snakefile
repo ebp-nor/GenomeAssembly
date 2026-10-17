@@ -101,6 +101,11 @@ def hifiasm_mode(wildcards):
     elif config["pacbio"] and not config["ont"]:
         return("pacbio.fastq.gz")
 
+def telomere_mode(wildcards):
+    #this needs to be the canonical repeat, i.e., CCCTAA for vertebrates instead of TTAGGG
+    if config["telomere"]:
+        return("--telo-m " + config["telomere"])
+
 def minimap_mode(wildcards):
     if pacbio:
         return("map-hifi")
@@ -357,6 +362,7 @@ rule assembly_hifiasm:
     params:
         threads = config["hifiasm_threads"],
         mode = hifiasm_mode,
+        t_mode = telomere_mode,
         linkreads = gen_linkread_cmd
     container:
         "containers/hifiasm_hybrid.sif"
@@ -375,7 +381,8 @@ rule assembly_hifiasm:
             --h1 hicF.fastq.gz \
             --h2 hicR.fastq.gz \
             --write-ec \
-            {params.mode}
+            {params.mode} \
+            {params.t_mode}
         mv assembly.* $CWD/results/assembly
         awk '/^S/{{print ">"$2"\n"$3}}' $CWD/results/assembly/assembly.hic.hap1.p_ctg.gfa \
             | fold > $CWD/{output.hap1}
@@ -406,6 +413,7 @@ rule assembly_hifiasm_nohic:
     params:
         threads = config["hifiasm_threads"],
         mode = hifiasm_mode,
+        t_mode = telomere_mode,
         linkreads = gen_linkread_cmd
     shell:
         r"""
@@ -417,7 +425,8 @@ rule assembly_hifiasm_nohic:
             --dual-scaf \
             -t{params.threads} \
             --write-ec \
-            {params.mode}
+            {params.mode} \
+            {params.t_mode}
         mv assembly.* ../results/assembly
         awk '/^S/{{print ">"$2"\n"$3}}' ../results/assembly/assembly.bp.hap1.p_ctg.gfa \
             | fold > ../{output.hap1}
@@ -444,6 +453,7 @@ rule assembly_hifiasm_haploid:
     params:
         threads = config["hifiasm_threads"],
         mode = hifiasm_mode,
+        t_mode = telomere_mode,
         linkreads = gen_linkread_cmd
     container:
         "containers/hifiasm_hybrid.sif"
@@ -457,7 +467,8 @@ rule assembly_hifiasm_haploid:
             -o assembly \
             -t{params.threads} \
             --write-ec \
-            {params.mode}
+            {params.mode} \
+            {params.t_mode}
         mv assembly.* ../results/assembly
         awk '/^S/{{print ">"$2"\n"$3}}' ../results/assembly/assembly.bp.p_ctg.gfa \
             | fold > ../{output.assembly}
