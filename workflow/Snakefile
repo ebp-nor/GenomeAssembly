@@ -117,21 +117,28 @@ def assembly_out(wildcards):
     output = []
     if config["haploid"]:
         output.append("results/assembly/busco_assembly.bp.p_ctg_"+config["busco_lineage"])
+        output.append("results/assembly/assembly.bp.p_ctg.fa.stats")
         if hicF and hicR:
             output.append("results/scaffolding/busco_haploid_scaffolds_final_"+config["busco_lineage"])
+            output.append("results/scaffolding/haploid_scaffolds_final.fa.stats")
     elif hicF and hicR:
         output.extend(expand("results/assembly/busco_assembly.hic.{hap}.p_ctg_{lineage}", lineage=config["busco_lineage"], hap=HAPS))
         output.extend(expand("results/scaffolding/busco_{hap}_scaffolds_final_{lineage}", lineage=config["busco_lineage"], hap=HAPS))
+        output.extend(expand("results/assembly/assembly.hic.{hap}.p_ctg.fa.stats", hap=HAPS))
+        output.extend(expand("results/scaffolding/{hap}_scaffolds_final.fa.stats", hap=HAPS))
     else:
         output.extend(expand("results/assembly/busco_assembly.bp.{hap}.p_ctg_{lineage}", lineage=config["busco_lineage"], hap=HAPS))
+        output.extend(expand("results/assembly/assembly.bp.{hap}.p_ctg.fa.stats", hap=HAPS))
     return(output)
 
 def decontam_out(wildcards):
     output = []
     if config["haploid"]:
         output.append("results/decontamination/haploid/busco_haploid_final.decon_"+config["busco_lineage"])
+        output.append("results/decontamination/haploid/haploid_final.decon.fa.stats")
     else:
         output.extend(expand("results/decontamination/{hap}/busco_{hap}_final.decon_{lineage}", lineage=config["busco_lineage"], hap=HAPS))
+        output.extend(expand("results/decontamination/{hap}/{hap}_final.decon.fa.stats", hap=HAPS))
     return(output)
 
 def fcs_input(wildcards):
@@ -720,8 +727,6 @@ rule scaffold_hap:
             -o results/scaffolding/{wildcards.hap} \
             1> results/scaffolding/yahs_{wildcards.hap}.out \
             2> results/scaffolding/yahs_{wildcards.hap}.err
-        gfastats {output} \
-            > results/scaffolding/{wildcards.hap}_scaffolds_final.stats
         if [ -f {output} ]; then
             rm results/scaffolding/{wildcards.hap}.bin
         fi
@@ -746,8 +751,6 @@ rule scaffold_haploid:
             -o results/scaffolding/haploid \
             1> results/scaffolding/yahs_haploid.out \
             2> results/scaffolding/yahs_haploid.err
-        gfastats {output} \
-            > results/scaffolding/haploid_scaffolds_final.stats
         if [ -f {output} ]; then
             rm results/scaffolding/haploid.bin
         fi
