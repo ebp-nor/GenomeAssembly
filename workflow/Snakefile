@@ -489,6 +489,30 @@ rule busco:
             --download_path /tmp
         """
 
+rule gfastats:
+    output:
+        assembly_stats = "results/{dir}/{assembly}.fa.stats",
+    input:
+        assembly = "results/{dir}/{assembly}.fa",
+    container:
+        "docker://quay.io/biocontainers/gfastats:1.3.11--h077b44d_0"
+    shell:
+        r"""
+        gfastats {input.assembly} > {output.assembly_stats}
+        """
+
+rule index:
+    output:
+        assembly_index = "results/{dir}/{assembly}.fa.fai",
+    input:
+        assembly = "results/{dir}/{assembly}.fa",
+    container:
+        "docker://quay.io/biocontainers/samtools:1.24--h9dcdb79_1"
+    shell:
+        r"""
+        samtools faidx {input.assembly}
+        """
+
 #Create Meryl Database
 rule create_meryl_db:
     output:
@@ -682,6 +706,7 @@ rule scaffold_hap:
         "results/scaffolding/{hap}_scaffolds_final.fa"
     input:
         assembly = "results/assembly/assembly.hic.{hap}.p_ctg.fa",
+        assembly_index = "results/assembly/assembly.hic.{hap}.p_ctg.fa.fai",
         bamfile = "results/scaffolding/{hap}_hic_markdup.sort_n.bam"
     threads: config["yahs_threads"]
     resources:
@@ -707,6 +732,7 @@ rule scaffold_haploid:
         "results/scaffolding/haploid_scaffolds_final.fa"
     input:
         assembly = "results/assembly/assembly.bp.p_ctg.fa",
+        assembly_index = "results/assembly/assembly.bp.p_ctg.fa.fai",
         bamfile = "results/scaffolding/haploid_hic_markdup.sort_n.bam"
     threads: config["yahs_threads"]
     resources:
