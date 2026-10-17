@@ -350,6 +350,7 @@ rule assembly_hifiasm:
         hap1 = "results/assembly/assembly.hic.hap1.p_ctg.fa",
         hap2 = "results/assembly/assembly.hic.hap2.p_ctg.fa",
         primary = "results/assembly/assembly_pri.hic.p_ctg.gfa"
+        ec_reads = "results/assembly/assembly.ec.fq.gz"
     input:
         unpack(get_reads),
         hicF = hicF,
@@ -390,6 +391,7 @@ rule assembly_hifiasm:
             | fold > $CWD/{output.hap2}
         awk '/^S/{{print ">"$2"\n"$3}}' $CWD/results/assembly/assembly_pri.hic.p_ctg.gfa \
             | fold > $CWD/{output.primary}
+        gzip $CWD/results/assembly/*fq
         cd $CWD && rm -r assembly_tmp
         if [ -f {output.hap1} ]; then
             rm results/assembly/*bin
@@ -401,6 +403,7 @@ rule assembly_hifiasm_nohic:
         hap1 = "results/assembly/assembly.bp.hap1.p_ctg.fa",
         hap2 = "results/assembly/assembly.bp.hap2.p_ctg.fa",
         primary = "results/assembly/assembly_pri.bp.p_ctg.fa"
+        ec_reads = "results/assembly/assembly.ec.fq.gz"
     input:
         unpack(get_reads)
     threads: config["hifiasm_threads"],
@@ -434,6 +437,7 @@ rule assembly_hifiasm_nohic:
             | fold > ../{output.hap2}
         awk '/^S/{{print ">"$2"\n"$3}}' $CWD/results/assembly/assembly_pri.bp.p_ctg.gfa \
             | fold > $CWD/{output.primary}
+        gzip $CWD/results/assembly/*fq
         cd .. && rm -r assembly_tmp
         if [ -f {output.hap1} ]; then
             rm results/assembly/*bin
@@ -442,7 +446,8 @@ rule assembly_hifiasm_nohic:
 
 rule assembly_hifiasm_haploid:
     output:
-        assembly = "results/assembly/assembly.bp.p_ctg.fa"
+        assembly = "results/assembly/assembly.bp.p_ctg.fa",
+        ec_reads = "results/assembly/assembly.ec.fq.gz"
     input:
         unpack(get_reads)
     threads: config["hifiasm_threads"],
@@ -472,6 +477,7 @@ rule assembly_hifiasm_haploid:
         mv assembly.* ../results/assembly
         awk '/^S/{{print ">"$2"\n"$3}}' ../results/assembly/assembly.bp.p_ctg.gfa \
             | fold > ../{output.assembly}
+        gzip $CWD/results/assembly/*fq
         cd .. && rm -r assembly_tmp
         if [ -f {output.assembly} ]; then
             rm results/assembly/*bin
@@ -832,11 +838,13 @@ rule fcs_gx:
             --contam-fasta-out results/decontamination/{wildcards.hap}/contam.fasta
         """
 
+#run oatk on error corrected reads from hifiasm: https://github.com/c-zhou/oatk/issues/16
+#this avoids running separately on ONT and PacBio
 rule run_oatk_plant:
     output:
-        "results/organelles/{tech}/oatk.pltd.ctg.fasta"
+        "results/organelles/oatk.pltd.ctg.fasta"
     input:
-        "input/{tech}.fastq.gz"
+        "results/assembly/assembly.ec.fq.gz"
     threads: config["oatk_threads"],
     resources:
         mem_mb = config["oatk_mem"]
@@ -857,15 +865,15 @@ rule run_oatk_plant:
             --nhmmscan nhmmscan \
             -m {params.oatk_db}/{params.lineage}_mito.fam \
             -p {params.oatk_db}/{params.lineage}_pltd.fam \
-            -o results/organelles/{wildcards.tech}/oatk \
+            -o results/organelles/oatk \
             {input}
         """
 
 rule run_oatk_nonplant:
     output:
-        "results/organelles/{tech}/oatk.mito.ctg.fasta"
+        "results/organelles/oatk.mito.ctg.fasta"
     input:
-        "input/{tech}.fastq.gz"
+        "results/assembly/assembly.ec.fq.gz"
     threads: config["oatk_threads"],
     resources:
         mem_mb = config["oatk_mem"]
@@ -886,7 +894,7 @@ rule run_oatk_nonplant:
             -t {params.threads} \
             --nhmmscan nhmmscan \
             -m {params.oatk_db}/{params.lineage}_mito.fam \
-            -o results/organelles/{wildcards.tech}/oatk \
+            -o results/organelles/oatk \
             {input}
         """
 
