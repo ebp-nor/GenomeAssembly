@@ -369,7 +369,7 @@ rule assembly_hifiasm:
     output:
         hap1 = "results/assembly/assembly.hic.hap1.p_ctg.fa",
         hap2 = "results/assembly/assembly.hic.hap2.p_ctg.fa",
-        primary = "results/assembly/assembly_pri.hic.p_ctg.gfa"
+        primary = "results/assembly/assembly_pri.hic.p_ctg.gfa",
         ec_reads = "results/assembly/assembly.ec.fq.gz"
     input:
         unpack(get_reads),
@@ -797,7 +797,7 @@ rule scaffold_haploid:
 #run as here: https://github.com/ncbi/fcs/issues/4#issuecomment-1210396021
 rule fcs_adaptor:
     output:
-        "results/decontamination/{hap}/{hap}_final.clean.fa"
+        "results/decontamination/{hap}/{hap}_final.clean.fa",
     input:
         fcs_input
     resources:
@@ -818,7 +818,7 @@ rule fcs_adaptor:
 #https://github.com/dirkjanvw/MoGAAAP/blob/main/MoGAAAP/workflow/rules/3.quality_assessment/03.fcs.smk
 rule fcs_gx:
     output:
-        "results/decontamination/{hap}/{hap}_final.decon.fa"
+        "results/decontamination/{hap}/{hap}_final.decon.fa",
     input:
         "results/decontamination/{hap}/{hap}_final.clean.fa"
     threads: config["fcs_threads"]
