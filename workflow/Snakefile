@@ -814,7 +814,8 @@ rule fcs_adaptor:
             {input}
         """
 
- #Run decontamination pipeline
+#Run decontamination pipeline
+#https://github.com/dirkjanvw/MoGAAAP/blob/main/MoGAAAP/workflow/rules/3.quality_assessment/03.fcs.smk
 rule fcs_gx:
     output:
         "results/decontamination/{hap}/{hap}_final.decon.fa"
@@ -837,17 +838,12 @@ rule fcs_gx:
         r"""
         mkdir -p results/decontamination/{wildcards.hap}/gx_output
         echo "GX_NUM_CORES={params.fcs_threads}" > results/decontamination/{wildcards.hap}/env.txt
-        python3 {params.fcs_path}/fcs.py \
-            --image {params.fcs_image} \
-            screen genome \
-            --fasta {input} \
-            --out-dir results/decontamination/{wildcards.hap}/gx_output \
+        run_gx --fasta {input} \
+            --tax-id {params.taxid} \
             --gx-db {params.fcs_db} \
-            --tax-id {params.taxid}
-        cat {input} \
-        | python3 {params.fcs_path}/fcs.py \
-            --image={params.fcs_image} \
-            clean genome \
+            --out-basename {output} \
+            --out-dir results/decontamination/{wildcards.hap}/gx_output
+        cat {input} | gx clean-genome \
             --action-report results/decontamination/{wildcards.hap}/gx_output/*.fcs_gx_report.txt \
             --output {output} \
             --contam-fasta-out results/decontamination/{wildcards.hap}/contam.fasta
