@@ -797,7 +797,7 @@ rule scaffold_haploid:
 #run as here: https://github.com/ncbi/fcs/issues/4#issuecomment-1210396021
 rule fcs_adaptor:
     output:
-        "results/decontamination/{hap}/{hap}_final.clean.fa",
+        "results/decontamination/{hap}/adaptor_output/cleaned_sequences/{hap}_final.clean.fa",
     input:
         fcs_input
     resources:
@@ -820,7 +820,7 @@ rule fcs_gx:
     output:
         "results/decontamination/{hap}/{hap}_final.decon.fa",
     input:
-        "results/decontamination/{hap}/{hap}_final.clean.fa"
+        "results/decontamination/{hap}/adaptor_output/cleaned_sequences/{hap}_final.clean.fa"
     threads: config["fcs_threads"]
     resources:
         runtime = config["fcs_gx_time"],
