@@ -263,6 +263,26 @@ rule hifiadapterfilt:
         rm -r -f pbfilt_temp
         """
 
+#does not work yet I think. Just keep it here for now, and modify when working.
+rule filter_hifi:
+    output:
+        cleaned_fastq = "results/pacbio/pacbio.filt.fastq.gz"
+    input:
+        config["pacbio"]
+    resources:
+        ntasks = config["adapterfilt_threads"]
+    params:
+        threads = config["adapterfilt_threads"],
+    container:
+        "containers/fcs-adaptor.sif"
+    shell:
+        r"""
+        fcs.py clean adapt \
+            --inputs {input} \
+            --output {output.cleaned_fastq} \
+            --euk
+        """
+
 #Count k-mers for genomescope and smudgeplot
 rule count_kmers:
     output:
@@ -774,6 +794,7 @@ rule scaffold_haploid:
         """
 
 #Remove adaptors and vector contamination
+#run as here: https://github.com/ncbi/fcs/issues/4#issuecomment-1210396021
 rule fcs_adaptor:
     output:
         "results/decontamination/{hap}/{hap}_final.clean.fa"
@@ -785,18 +806,12 @@ rule fcs_adaptor:
     params:
         fcs_path = config["fcs_path"],
     container:
-        "docker://quay.io/biocontainers/ncbi-fcs-gx:0.5.5--h9948957_0"
+        "containers/fcs-adaptor.sif"
     shell:
         r"""
-        mkdir -p results/decontamination/{wildcards.hap}/adaptor_output
-        bash run_fcsadaptor.sh \
-            --fasta-input {input} \
-            --output-dir results/decontamination/{wildcards.hap}/adaptor_output \
+        av_screen_x -o results/decontamination/{wildcards.hap}/adaptor_output \
             --euk \
-            --container-engine singularity \
-            --image {params.fcs_path}/fcs-adaptor.sif
-        sed 's/lcl|/clean/g' \
-            results/decontamination/{wildcards.hap}/adaptor_output/cleaned_sequences/*.fa > {output}
+            {input}
         """
 
  #Run decontamination pipeline
@@ -817,7 +832,7 @@ rule fcs_gx:
         fcs_db = config["fcs_gx_db"],
         taxid = config["taxid"]
     container:
-        "docker://quay.io/biocontainers/ncbi-fcs-gx:0.5.5--h9948957_0"
+        "containers/fcs-gx.sif"
     shell:
         r"""
         mkdir -p results/decontamination/{wildcards.hap}/gx_output
