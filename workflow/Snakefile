@@ -422,7 +422,7 @@ rule assembly_hifiasm_nohic:
     output:
         hap1 = "results/assembly/assembly.bp.hap1.p_ctg.fa",
         hap2 = "results/assembly/assembly.bp.hap2.p_ctg.fa",
-        primary = "results/assembly/assembly_pri.bp.p_ctg.fa"
+        primary = "results/assembly/assembly_pri.bp.p_ctg.fa",
         ec_reads = "results/assembly/assembly.ec.fq.gz"
     input:
         unpack(get_reads)
