@@ -6,20 +6,21 @@ HAPS = ["hap1", "hap2"]
 #Check if ONT reads are defined
 ont = config["ont"]
 
+
 #move the below into a rule
 print()
-shell(f"mkdir -p input")
-if pacbio:
-    shell(f"echo \"Input PacBio reads: {pacbio}\"")
-    shell(f"ln -sf {pacbio} input/pacbio.fastq.gz")
-if ont:
-    shell(f"echo \"Input ONT reads: {ont}\"")
-    shell(f"ln -sf {ont} input/ont.fastq.gz")
-if hicF and hicR:
-    shell(f"echo \"Input HiC reads: {hicF}, {hicR}\"")
-    shell(f"ln -sf {hicF} input/hicF.fastq.gz")
-    shell(f"ln -sf {hicR} input/hicR.fastq.gz")
-
+if not os.path.exists("input"):
+    shell(f"mkdir -p input")
+    if pacbio and not os.path.exists("input/pacbio.fastq.gz"):
+        shell(f"echo \"Input PacBio reads: {pacbio}\"")
+        shell(f"ln -sf {pacbio} input/pacbio.fastq.gz")
+    if ont and not os.path.exists("input/ont.fastq.gz"):
+        shell(f"echo \"Input ONT reads: {ont}\"")
+        shell(f"ln -sf {ont} input/ont.fastq.gz")
+    if hicF and hicR and not os.path.exists("input/hicF.fastq.gz") and not os.path.exists("input/hicR.fastq.gz"):
+        shell(f"echo \"Input HiC reads: {hicF}, {hicR}\"")
+        shell(f"ln -sf {hicF} input/hicF.fastq.gz")
+        shell(f"ln -sf {hicR} input/hicR.fastq.gz")
 
 #Decide which oatk analysis to run
 def oatk_isPlant():
@@ -222,7 +223,6 @@ rule decontamination:
 rule organelles:
     input:
         oatk_isPlant()
-
 
 include: "rules/read_statistics.smk"
 
@@ -796,7 +796,8 @@ rule fcs_gx:
     shell:
         r"""
         mkdir -p results/decontamination/{wildcards.hap}/gx_output
-        echo "GX_NUM_CORES={params.fcs_threads}" > results/decontamination/{wildcards.hap}/env.txt
+        export  "GX_NUM_CORES={params.fcs_threads}"
+        #echo "GX_NUM_CORES={params.fcs_threads}" > results/decontamination/{wildcards.hap}/env.txt
         run_gx --fasta {input} \
             --tax-id {params.taxid} \
             --gx-db {params.fcs_db} \
