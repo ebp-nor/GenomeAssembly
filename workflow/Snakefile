@@ -227,32 +227,32 @@ rule organelles:
 include: "rules/read_statistics.smk"
 
 #Filter PacBio HiFi reads. Not using anymore. FCS adapter can deal with this. The linked singularity image had errors.
-rule hifiadapterfilt:
-    output:
-        pacbioFilt = "results/pacbio/pacbio.filt.fastq.gz"
-    input:
-        config["pacbio"]
-    resources:
-        ntasks = config["adapterfilt_threads"]
-    params:
-        threads = config["adapterfilt_threads"],
-    container:
-        "https://depot.galaxyproject.org/singularity/hifiadapterfilt:3.0.0--hdfd78af_0"
-    shell:
-        r"""
-        mkdir -p pbfilt_temp
-        cd pbfilt_temp
-        ln -sf {input} ./
-        mkdir -p tmp
-        export TMPDIR=./tmp
-        pbadapterfilt.sh \
-            -t {params.threads} \
-            -o filtered
-        mv filtered/*filt.fastq.gz ../{output.pacbioFilt}
-        rm -r -f ./tmp
-        cd ..
-        rm -r -f pbfilt_temp
-        """
+#rule hifiadapterfilt:
+#    output:
+#        pacbioFilt = "results/pacbio/pacbio.filt.fastq.gz"
+#    input:
+#        config["pacbio"]
+#    resources:
+#        ntasks = config["adapterfilt_threads"]
+#    params:
+#        threads = config["adapterfilt_threads"],
+#    container:
+#        "https://depot.galaxyproject.org/singularity/hifiadapterfilt:3.0.0--hdfd78af_0"
+#    shell:
+#        r"""
+#        mkdir -p pbfilt_temp
+#        cd pbfilt_temp
+#        ln -sf {input} ./
+#        mkdir -p tmp
+#        export TMPDIR=./tmp
+#        pbadapterfilt.sh \
+#            -t {params.threads} \
+#            -o filtered
+#        mv filtered/*filt.fastq.gz ../{output.pacbioFilt}
+#        rm -r -f ./tmp
+#        cd ..
+#        rm -r -f pbfilt_temp
+#        """
 
 #does not work yet I think. Just keep it here for now, and modify when working.
 #rule filter_hifi:
@@ -756,7 +756,7 @@ rule scaffold_haploid:
 #run as here: https://github.com/ncbi/fcs/issues/4#issuecomment-1210396021
 rule fcs_adaptor:
     output:
-        "results/decontamination/{hap}/adaptor_output/cleaned_sequences/{hap}_final.clean.fa",
+        "results/decontamination/{hap}/adaptor_output/cleaned_sequences/{hap}_scaffolds_final.fa",
     input:
         fcs_input
     resources:
@@ -779,7 +779,7 @@ rule fcs_gx:
     output:
         "results/decontamination/{hap}/{hap}_final.decon.fa",
     input:
-        "results/decontamination/{hap}/adaptor_output/cleaned_sequences/{hap}_final.clean.fa"
+        "results/decontamination/{hap}/adaptor_output/cleaned_sequences/{hap}_scaffolds_final.fa"
     threads: config["fcs_threads"]
     resources:
         runtime = config["fcs_gx_time"],
