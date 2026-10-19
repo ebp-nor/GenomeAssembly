@@ -26,15 +26,9 @@ if not os.path.exists("input"):
 def oatk_isPlant():
     output = []
     if config["oatk_isPlant"] == True:
-        if config["pacbio"]:
-            output.append("results/organelles/pacbio/oatk.pltd.ctg.fasta")
-        if config["ont"]:
-            output.append("results/organelles/ont/oatk.pltd.ctg.fasta")
+        output.append("results/organelles/oatk.pltd.ctg.fasta")
     else:
-        if config["pacbio"]:
-            output.append("results/organelles/pacbio/oatk.mito.ctg.fasta")
-        if config["ont"]:
-            output.append("results/organelles/ont/oatk.mito.ctg.fasta")
+        output.append("results/organelles/oatk.mito.ctg.fasta")
     return(output)
 
 
@@ -275,53 +269,9 @@ include: "rules/read_statistics.smk"
 
 include: "rules/count_kmers.smk"
 
-#Run Genomescope
-rule genomescope:
-    output:
-        "results/pre_assembly/genomescope/{tech}_genomescope_ploidy{ploidy}.out"
-    input:
-        #rules.count_kmers.output.hist
-        histo = "results/pre_assembly/{tech}_reads.histo",
-    resources:
-        runtime = config["GS_time"],
-        mem_mb = config["GS_mem"],
-    params:
-        ploidy_range = config["GS_ploidy_range"],
-        k = config["FastK_k"]
-    container:
-        "docker://quay.io/biocontainers/genomescope2:2.1.0--py313r44hdfd78af_0"
-    shell:
-        r"""
-        genomescope2 \
-         -i {input.histo} \
-         -o results/pre_assembly/genomescope/{wildcards.tech}_ploidy{wildcards.ploidy} \
-         -k {params.k} \
-         -p {wildcards.ploidy} \
-         1> results/pre_assembly/genomescope/{wildcards.tech}_genomescope_ploidy{wildcards.ploidy}.out \
-         2> results/pre_assembly/genomescope/{wildcards.tech}_genomescope_ploidy{wildcards.ploidy}.err
-        """
+include: "rules/genomescope.smk"
 
-#Run Smudgeplot
-rule smudgeplot:
-    output:
-        "results/pre_assembly/smudgeplot/{tech}_smudgeplot.pdf"
-    input:
-        db_ktab = "results/pre_assembly/{tech}_reads.kmer.db.ktab",
-        db_hist = "results/pre_assembly/{tech}_reads.kmer.db.hist"
-    container:
-        #"docker://quay.io/biocontainers/smudgeplot:0.5.3--py314h577a1d6_0"
-        #this container below contains both smudgeplot and fastk since smudgeplot requires Logex which is distributed with FastK
-        "docker://quay.io/sanger-tol/smudgeplot:0.5.4-c1"
-    params:
-        t = config["FastK_t"]
-    resources:
-        runtime = config["smudge_time"],
-        mem_mb = config["smudge_mem"],
-    shell:
-        r"""
-        smudgeplot hetmers results/pre_assembly/{wildcards.tech}_reads.kmer.db -L 10 -t {params.t} -o results/pre_assembly/smudgeplot/{wildcards.tech}_smudgeplot_pairs
-        smudgeplot all results/pre_assembly/smudgeplot/{wildcards.tech}_smudgeplot_pairs_text.smu -o results/pre_assembly/smudgeplot/{wildcards.tech}
-        """
+include: "rules/smudgeplot.smk"
 
 #Perform genome assembly with hifiasm using pacbio reads and hic reads
 rule assembly_hifiasm:
@@ -463,46 +413,9 @@ rule assembly_hifiasm_haploid:
         fi
         """
 
-#Run busco on assembly
-rule busco:
-    output:
-        directory(expand("results/{{dir}}/busco_{{assembly}}_{lineage}", lineage=config["busco_lineage"]))
-    input:
-        assembly = "results/{dir}/{assembly}.fa",
-        busco = expand("{busco_db_dir}/{lineage}_odb{version}", busco_db_dir=config["busco_db_dir"], lineage=config["busco_lineage"], version=config["busco_db_version"])
-    threads: config["busco_threads"],
-    resources:
-        mem_mb = config["busco_mem"],
-    params:
-        lineage = config["busco_lineage"],
-        threads = config["busco_threads"]
-    container:
-        "docker://quay.io/biocontainers/busco:6.1.0--pyhdfd78af_2"
-    shell:
-        r"""
-        busco \
-            -i {input.assembly} \
-            -l {input.busco} \
-            -c {params.threads} \
-            -m genome \
-            --offline \
-            --tar \
-            --out_path results/{wildcards.dir} \
-            -o busco_{wildcards.assembly}_{params.lineage} \
-            --download_path /tmp
-        """
+include: "rules/busco.smk"
 
-rule gfastats:
-    output:
-        assembly_stats = "results/{dir}/{assembly}.fa.stats",
-    input:
-        assembly = "results/{dir}/{assembly}.fa",
-    container:
-        "docker://quay.io/biocontainers/gfastats:1.3.11--h077b44d_0"
-    shell:
-        r"""
-        gfastats {input.assembly} > {output.assembly_stats}
-        """
+include: "rules/gfastats.smk"
 
 rule index:
     output:
