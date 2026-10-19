@@ -255,24 +255,23 @@ rule hifiadapterfilt:
         """
 
 #does not work yet I think. Just keep it here for now, and modify when working.
-rule filter_hifi:
-    output:
-        cleaned_fastq = "results/pacbio/pacbio.filt.fastq.gz"
-    input:
-        config["pacbio"]
-    resources:
-        ntasks = config["adapterfilt_threads"]
-    params:
-        threads = config["adapterfilt_threads"],
-    container:
-        "containers/fcs-adaptor.sif"
-    shell:
-        r"""
-        fcs.py clean adapt \
-            --inputs {input} \
-            --output {output.cleaned_fastq} \
-            --euk
-        """
+#rule filter_hifi:
+#    output:
+#        cleaned_fastq = "results/pacbio/pacbio.filt.fastq.gz"
+#    input:
+#        config["pacbio"]
+#    resources:
+#        ntasks = config["adapterfilt_threads"]
+#    params:
+#        threads = config["adapterfilt_threads"],
+#    container:
+#        "containers/fcs-adaptor.sif"
+#    shell:
+#        r"""
+#        av_screen_x -o results/decontamination/{wildcards.hap}/adaptor_output \
+#           --euk \
+#           {input}
+#        """
 
 import "rules/count_kmers.smk"
 
