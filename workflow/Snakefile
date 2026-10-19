@@ -224,7 +224,7 @@ rule organelles:
         oatk_isPlant()
 
 
-import "rules/read_statistics.smk"
+include: "rules/read_statistics.smk"
 
 #Filter PacBio HiFi reads. Not using anymore. FCS adapter can deal with this. The linked singularity image had errors.
 rule hifiadapterfilt:
@@ -273,7 +273,7 @@ rule hifiadapterfilt:
 #           {input}
 #        """
 
-import "rules/count_kmers.smk"
+include: "rules/count_kmers.smk"
 
 #Run Genomescope
 rule genomescope:
