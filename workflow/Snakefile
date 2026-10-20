@@ -696,7 +696,8 @@ rule fcs_gx:
     threads: config["fcs_threads"]
     resources:
         runtime = config["fcs_gx_time"],
-        mem_mb = config["fcs_gx_mem"],
+        #mem_mb = config["fcs_gx_mem"],
+        mem_mb_per_cpu = config["fcs_gx_mem_per_cpu"],
         slurm_partition = config["fcs_gx_partition"],
     params:
         fcs_path = config["fcs_path"],
