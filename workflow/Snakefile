@@ -709,10 +709,10 @@ rule fcs_gx:
         "containers/fcs-gx.sif"
     shell:
         r"""
-        ls
         mkdir -p results/decontamination/{wildcards.hap}/gx_output
-        export  "GX_NUM_CORES={params.fcs_threads}"
-        #echo "GX_NUM_CORES={params.fcs_threads}" > results/decontamination/{wildcards.hap}/env.txt
+        #export  "GX_NUM_CORES={params.fcs_threads}"
+        echo "GX_NUM_CORES={params.fcs_threads}" > results/decontamination/{wildcards.hap}/env.txt
+        #echo "GX_INSTANTIATE_FASTA=1" >> results/decontamination/{wildcards.hap}/env.txt
         run_gx --fasta {input} \
             --tax-id {params.taxid} \
             --gx-db {params.fcs_db} \
