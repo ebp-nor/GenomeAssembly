@@ -696,8 +696,8 @@ rule fcs_gx:
     threads: config["fcs_threads"]
     resources:
         runtime = config["fcs_gx_time"],
-        #mem_mb = config["fcs_gx_mem"],
-        mem_mb_per_cpu = config["fcs_gx_mem_per_cpu"],
+        mem_mb = config["fcs_gx_mem"],
+        #mem_mb_per_cpu = config["fcs_gx_mem_per_cpu"],
         slurm_partition = config["fcs_gx_partition"],
     params:
         fcs_path = config["fcs_path"],
@@ -705,20 +705,23 @@ rule fcs_gx:
         fcs_image = config["fcs_gx_image"],
         fcs_db = config["fcs_gx_db"],
         taxid = config["taxid"]
-    container:
-        "containers/fcs-gx.sif"
+    #container:
+    #    "containers/fcs-gx.sif"
     shell:
         r"""
         mkdir -p results/decontamination/{wildcards.hap}/gx_output
-        #export  "GX_NUM_CORES={params.fcs_threads}"
         echo "GX_NUM_CORES={params.fcs_threads}" > results/decontamination/{wildcards.hap}/env.txt
-        #echo "GX_INSTANTIATE_FASTA=1" >> results/decontamination/{wildcards.hap}/env.txt
-        run_gx --fasta {input} \
-            --tax-id {params.taxid} \
+        python3 {params.fcs_path}/fcs.py \
+            --image {params.fcs_image} \
+            screen genome \
+            --fasta {input} \
+            --out-dir results/decontamination/{wildcards.hap}/gx_output \
             --gx-db {params.fcs_db} \
-            --out-basename {output} \
-            --out-dir results/decontamination/{wildcards.hap}/gx_output
-        cat {input} | gx clean-genome \
+            --tax-id {params.taxid}
+        cat {input} \
+        | python3 {params.fcs_path}/fcs.py \
+            --image={params.fcs_image} \
+            clean genome \
             --action-report results/decontamination/{wildcards.hap}/gx_output/*.fcs_gx_report.txt \
             --output {output} \
             --contam-fasta-out results/decontamination/{wildcards.hap}/contam.fasta
