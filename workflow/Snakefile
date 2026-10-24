@@ -509,6 +509,7 @@ rule map_hic:
     threads: config["yahs_threads"]
     resources:
         runtime = config["yahs_cluster_time"],
+        mem_mb = config["yahs_memory"],
     params:
         t = config["yahs_threads"],
     container:
@@ -532,6 +533,7 @@ rule map_hic_haploid:
     threads: config["yahs_threads"]
     resources:
         runtime = config["yahs_cluster_time"],
+        mem_mb = config["yahs_memory"],
     params:
         t = config["yahs_threads"],
     container:
