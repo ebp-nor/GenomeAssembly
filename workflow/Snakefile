@@ -313,6 +313,7 @@ rule assembly_hifiasm:
             --write-ec \
             {params.mode} \
             {params.t_mode}
+        gzip *fq
         mv assembly.* $CWD/results/assembly
         awk '/^S/{{print ">"$2"\n"$3}}' $CWD/results/assembly/assembly.hic.hap1.p_ctg.gfa \
             | fold > $CWD/{output.hap1}
@@ -320,7 +321,6 @@ rule assembly_hifiasm:
             | fold > $CWD/{output.hap2}
         awk '/^S/{{print ">"$2"\n"$3}}' $CWD/results/assembly/assembly_pri.hic.p_ctg.gfa \
             | fold > $CWD/{output.primary}
-        gzip $CWD/results/assembly/*fq
         cd $CWD && rm -r assembly_tmp
         if [ -f {output.hap1} ]; then
             rm results/assembly/*bin
@@ -359,6 +359,7 @@ rule assembly_hifiasm_nohic:
             --write-ec \
             {params.mode} \
             {params.t_mode}
+        gzip *fq
         mv assembly.* ../results/assembly
         awk '/^S/{{print ">"$2"\n"$3}}' ../results/assembly/assembly.bp.hap1.p_ctg.gfa \
             | fold > ../{output.hap1}
@@ -366,7 +367,6 @@ rule assembly_hifiasm_nohic:
             | fold > ../{output.hap2}
         awk '/^S/{{print ">"$2"\n"$3}}' $CWD/results/assembly/assembly_pri.bp.p_ctg.gfa \
             | fold > $CWD/{output.primary}
-        gzip $CWD/results/assembly/*fq
         cd .. && rm -r assembly_tmp
         if [ -f {output.hap1} ]; then
             rm results/assembly/*bin
@@ -403,10 +403,10 @@ rule assembly_hifiasm_haploid:
             --write-ec \
             {params.mode} \
             {params.t_mode}
+        gzip *fq
         mv assembly.* ../results/assembly
         awk '/^S/{{print ">"$2"\n"$3}}' ../results/assembly/assembly.bp.p_ctg.gfa \
             | fold > ../{output.assembly}
-        gzip $CWD/results/assembly/*fq
         cd .. && rm -r assembly_tmp
         if [ -f {output.assembly} ]; then
             rm results/assembly/*bin
