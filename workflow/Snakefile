@@ -183,7 +183,7 @@ rule all:
         decontam_out,
         read_stats,
         curation_out,
-        #oatk_isPlant(),
+        oatk_isPlant(),
 
 #Summary rule to run the full pipeline, but without curation
 rule all_nocuration:
@@ -193,7 +193,7 @@ rule all_nocuration:
         assembly_out,
         expand("results/decontamination/{hap}/busco_{hap}_final.decon_odb{lineage}", lineage=config["busco_lineage"], hap=HAPS),
         read_stats,
-        #oatk_isPlant(),
+        oatk_isPlant(),
 
 #Summary rule to run all pre-assembly steps
 rule pre_assembly:
