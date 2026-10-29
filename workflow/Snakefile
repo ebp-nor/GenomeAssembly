@@ -7,6 +7,8 @@ HAPS = ["hap1", "hap2"]
 ont = config["ont"]
 
 
+ruleorder: assembly_hifiasm > assembly_hifiasm_nohic
+
 #move the below into a rule
 print()
 if not os.path.exists("input"):
