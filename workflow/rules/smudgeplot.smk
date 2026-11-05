@@ -17,5 +17,5 @@ rule smudgeplot:
     shell:
         r"""
         smudgeplot hetmers results/pre_assembly/{wildcards.tech}_reads.kmer.db -L 10 -t {params.t} -o results/pre_assembly/smudgeplot/{wildcards.tech}_smudgeplot_pairs
-        smudgeplot all results/pre_assembly/smudgeplot/{wildcards.tech}_smudgeplot_pairs_text.smu -o results/pre_assembly/smudgeplot/{wildcards.tech}
+        smudgeplot all results/pre_assembly/smudgeplot/{wildcards.tech}_smudgeplot_pairs.smu -o results/pre_assembly/smudgeplot/{wildcards.tech}
         """
