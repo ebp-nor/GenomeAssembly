@@ -7,7 +7,7 @@ HAPS = ["hap1", "hap2"]
 ont = config["ont"]
 
 
-ruleorder: assembly_hifiasm > assembly_hifiasm_nohic
+ruleorder: assembly_hifiasm > assembly_hifiasm_haploid > assembly_hifiasm_nohic
 
 #move the below into a rule
 print()
